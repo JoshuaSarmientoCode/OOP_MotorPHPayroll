@@ -20,23 +20,27 @@ public class EmployeeDialog extends JDialog {
     private final ValidationService validator;
     private final MainController controller;
 
-    // Form fields
-    private JTextField empIdField;
-    private JTextField lastNameField;
-    private JTextField firstNameField;
-    private JTextField addressField;
-    private JTextField phoneField;
-    private JTextField emailField;
-    private JTextField positionField;
-    private JTextField salaryField;
-    private JTextField sssField;
-    private JTextField tinField;
-    private JTextField philField;
-    private JTextField pagibigField;
-    private JTextField supervisorField;
-    private JTextField birthDateField;
-    private JComboBox<String> statusCombo;
-    private JComboBox<String> employeeTypeCombo;
+    // Form fields - All 19 fields from CSV
+    private JTextField empIdField;                    // Employee #
+    private JTextField lastNameField;                  // Last Name
+    private JTextField firstNameField;                 // First Name
+    private JTextArea addressArea;                     // Address (using JTextArea for multiline)
+    private JTextField birthDateField;                 // Birthday
+    private JTextField phoneField;                      // Phone Number
+    private JTextField sssField;                        // SSS #
+    private JTextField philHealthField;                 // Philhealth #
+    private JTextField tinField;                         // TIN #
+    private JTextField pagIbigField;                     // Pag-ibig #
+    private JComboBox<String> statusCombo;               // Status
+    private JTextField positionField;                    // Position
+    private JTextField supervisorField;                  // Immediate Supervisor
+    private JTextField basicSalaryField;                 // Basic Salary
+    private JTextField riceSubsidyField;                 // Rice Subsidy
+    private JTextField phoneAllowanceField;              // Phone Allowance
+    private JTextField clothingAllowanceField;           // Clothing Allowance
+    private JTextField grossSemiMonthlyField;            // Gross Semi-monthly Rate (NOW EDITABLE)
+    private JTextField hourlyRateField;                  // Hourly Rate (NOW EDITABLE)
+    private JComboBox<String> employeeTypeCombo;         // Employee Type (for classification)
 
     // Validation tracking
     private Map<JTextField, Boolean> fieldValid = new HashMap<>();
@@ -67,7 +71,7 @@ public class EmployeeDialog extends JDialog {
 
     private void initializeDialog() {
         setLayout(new BorderLayout());
-        setSize(700, 800);
+        setSize(850, 900);
         setLocationRelativeTo(getParent());
         setResizable(true);
         setModal(true);
@@ -97,29 +101,29 @@ public class EmployeeDialog extends JDialog {
         panel.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.insets = new Insets(6, 8, 6, 8);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.anchor = GridBagConstraints.WEST;
 
         int row = 0;
 
-        // ========== SECTION 1: EMPLOYEE INFORMATION ==========
+        // ========== SECTION 1: EMPLOYEE ID AND TYPE ==========
         row = addSectionHeader(panel, gbc, row, "EMPLOYEE INFORMATION");
 
-        // Employee ID (read-only)
+        // Employee # (read-only, auto-generated)
         gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 1;
-        panel.add(createLabel("EMPLOYEE ID:"), gbc);
+        panel.add(createLabel("Employee #:"), gbc);
 
         gbc.gridx = 1;
-        empIdField = createTextField(15, false); // Set to editable false for ID (auto-generated)
+        empIdField = createTextField(15, false);
         empIdField.setEditable(false);
         empIdField.setBackground(new Color(245, 245, 245));
         panel.add(empIdField, gbc);
         row++;
 
-        // Employee Type
+        // Employee Type (for classification)
         gbc.gridx = 0; gbc.gridy = row;
-        panel.add(createLabel("EMPLOYEE TYPE:"), gbc);
+        panel.add(createLabel("Employee Type:"), gbc);
 
         gbc.gridx = 1;
         employeeTypeCombo = new JComboBox<>(new String[]{
@@ -129,7 +133,7 @@ public class EmployeeDialog extends JDialog {
         employeeTypeCombo.setFont(UITheme.NORMAL_FONT);
         employeeTypeCombo.setBackground(UITheme.CARD_BG);
         employeeTypeCombo.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_COLOR));
-        employeeTypeCombo.setPreferredSize(new Dimension(200, 35));
+        employeeTypeCombo.setPreferredSize(new Dimension(250, 35));
         panel.add(employeeTypeCombo, gbc);
         row++;
 
@@ -138,10 +142,10 @@ public class EmployeeDialog extends JDialog {
 
         // Last Name
         gbc.gridx = 0; gbc.gridy = row;
-        panel.add(createLabel("LAST NAME:"), gbc);
+        panel.add(createLabel("Last Name:*"), gbc);
 
         gbc.gridx = 1;
-        lastNameField = createTextField(20, true);
+        lastNameField = createTextField(25, true);
         lastNameField.setEditable(true);
         lastNameField.addFocusListener(new ValidationFocusListener(f ->
                 validateField("lastName", lastNameField.getText(),
@@ -151,10 +155,10 @@ public class EmployeeDialog extends JDialog {
 
         // First Name
         gbc.gridx = 0; gbc.gridy = row;
-        panel.add(createLabel("FIRST NAME:"), gbc);
+        panel.add(createLabel("First Name:*"), gbc);
 
         gbc.gridx = 1;
-        firstNameField = createTextField(20, true);
+        firstNameField = createTextField(25, true);
         firstNameField.setEditable(true);
         firstNameField.addFocusListener(new ValidationFocusListener(f ->
                 validateField("firstName", firstNameField.getText(),
@@ -162,45 +166,54 @@ public class EmployeeDialog extends JDialog {
         panel.add(firstNameField, gbc);
         row++;
 
-        // Birth Date
+        // Address
         gbc.gridx = 0; gbc.gridy = row;
-        panel.add(createLabel("BIRTH DATE (YYYY-MM-DD):"), gbc);
+        gbc.anchor = GridBagConstraints.NORTHWEST;
+        panel.add(createLabel("Address:*"), gbc);
+
+        gbc.gridx = 1;
+        addressArea = new JTextArea(3, 25);
+        addressArea.setFont(UITheme.NORMAL_FONT);
+        addressArea.setLineWrap(true);
+        addressArea.setWrapStyleWord(true);
+        addressArea.setBorder(UITheme.INPUT_BORDER);
+        addressArea.addFocusListener(new ValidationFocusListener(f ->
+                validateField("address", addressArea.getText(),
+                        validator.validateAddress(addressArea.getText()))));
+
+        JScrollPane addressScroll = new JScrollPane(addressArea);
+        addressScroll.setBorder(null);
+        addressScroll.setPreferredSize(new Dimension(300, 60));
+        panel.add(addressScroll, gbc);
+        gbc.anchor = GridBagConstraints.WEST;
+        row++;
+
+        // Birthday
+        gbc.gridx = 0; gbc.gridy = row;
+        panel.add(createLabel("Birthday (MM/DD/YYYY):*"), gbc);
 
         gbc.gridx = 1;
         birthDateField = createTextField(15, true);
         birthDateField.setEditable(true);
-        birthDateField.setText(LocalDate.now().minusYears(25).toString());
         birthDateField.addFocusListener(new ValidationFocusListener(f -> {
             try {
-                LocalDate date = LocalDate.parse(birthDateField.getText().trim());
+                LocalDate date = LocalDate.parse(birthDateField.getText().trim(),
+                        DateTimeFormatter.ofPattern("MM/dd/yyyy"));
                 validateField("birthDate", birthDateField.getText(),
                         validator.validateBirthDate(date));
             } catch (Exception e) {
-                setFieldError(birthDateField, "Invalid date format (use YYYY-MM-DD)");
+                setFieldError(birthDateField, "Invalid date format (use MM/DD/YYYY)");
             }
         }));
         panel.add(birthDateField, gbc);
         row++;
 
-        // Address
+        // Phone Number
         gbc.gridx = 0; gbc.gridy = row;
-        panel.add(createLabel("ADDRESS:"), gbc);
+        panel.add(createLabel("Phone Number:*"), gbc);
 
         gbc.gridx = 1;
-        addressField = createTextField(25, true);
-        addressField.setEditable(true);
-        addressField.addFocusListener(new ValidationFocusListener(f ->
-                validateField("address", addressField.getText(),
-                        validator.validateAddress(addressField.getText()))));
-        panel.add(addressField, gbc);
-        row++;
-
-        // Phone
-        gbc.gridx = 0; gbc.gridy = row;
-        panel.add(createLabel("PHONE NUMBER:"), gbc);
-
-        gbc.gridx = 1;
-        phoneField = createTextField(15, true);
+        phoneField = createTextField(20, true);
         phoneField.setEditable(true);
         phoneField.addFocusListener(new ValidationFocusListener(f ->
                 validateField("phone", phoneField.getText(),
@@ -208,35 +221,12 @@ public class EmployeeDialog extends JDialog {
         panel.add(phoneField, gbc);
         row++;
 
-        // Email
-        gbc.gridx = 0; gbc.gridy = row;
-        panel.add(createLabel("EMAIL:"), gbc);
-
-        gbc.gridx = 1;
-        emailField = createTextField(25, true);
-        emailField.setEditable(true);
-        emailField.addFocusListener(new ValidationFocusListener(f ->
-                validateField("email", emailField.getText(),
-                        validator.validateEmail(emailField.getText()))));
-        panel.add(emailField, gbc);
-        row++;
-
         // ========== SECTION 3: EMPLOYMENT DETAILS ==========
         row = addSectionHeader(panel, gbc, row, "EMPLOYMENT DETAILS");
 
-        // Position
-        gbc.gridx = 0; gbc.gridy = row;
-        panel.add(createLabel("POSITION:"), gbc);
-
-        gbc.gridx = 1;
-        positionField = createTextField(20, true);
-        positionField.setEditable(true);
-        panel.add(positionField, gbc);
-        row++;
-
         // Status
         gbc.gridx = 0; gbc.gridy = row;
-        panel.add(createLabel("STATUS:"), gbc);
+        panel.add(createLabel("Status:*"), gbc);
 
         gbc.gridx = 1;
         statusCombo = new JComboBox<>(new String[]{"REGULAR", "PROBATIONARY", "CONTRACTUAL"});
@@ -247,34 +237,159 @@ public class EmployeeDialog extends JDialog {
         panel.add(statusCombo, gbc);
         row++;
 
-        // Supervisor
+        // Position
         gbc.gridx = 0; gbc.gridy = row;
-        panel.add(createLabel("SUPERVISOR:"), gbc);
+        panel.add(createLabel("Position:*"), gbc);
 
         gbc.gridx = 1;
-        supervisorField = createTextField(20, true);
+        positionField = createTextField(25, true);
+        positionField.setEditable(true);
+        panel.add(positionField, gbc);
+        row++;
+
+        // Immediate Supervisor
+        gbc.gridx = 0; gbc.gridy = row;
+        panel.add(createLabel("Immediate Supervisor:"), gbc);
+
+        gbc.gridx = 1;
+        supervisorField = createTextField(25, true);
         supervisorField.setEditable(true);
         panel.add(supervisorField, gbc);
         row++;
 
+        // ========== SECTION 4: SALARY AND ALLOWANCES ==========
+        row = addSectionHeader(panel, gbc, row, "SALARY AND ALLOWANCES");
+
         // Basic Salary
         gbc.gridx = 0; gbc.gridy = row;
-        panel.add(createLabel("BASIC SALARY:"), gbc);
+        panel.add(createLabel("Basic Salary:*"), gbc);
 
         gbc.gridx = 1;
-        salaryField = createTextField(15, true);
-        salaryField.setEditable(true);
-        salaryField.setText("25000");
-        salaryField.addFocusListener(new ValidationFocusListener(f ->
-                validateField("salary", salaryField.getText(),
-                        validator.validateNumeric(salaryField.getText(), "Basic salary", 10000, 1000000))));
-        panel.add(salaryField, gbc);
+        basicSalaryField = createTextField(15, true);
+        basicSalaryField.setEditable(true);
+        basicSalaryField.addFocusListener(new ValidationFocusListener(f -> {
+            validateField("salary", basicSalaryField.getText(),
+                    validator.validateNumeric(basicSalaryField.getText(), "Basic salary", 10000, 1000000));
+            calculateDerivedFields();
+        }));
+        basicSalaryField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                calculateDerivedFields();
+            }
+        });
+        panel.add(basicSalaryField, gbc);
         row++;
 
-        // ========== SECTION 4: GOVERNMENT IDS ==========
+        // Rice Subsidy
+        gbc.gridx = 0; gbc.gridy = row;
+        panel.add(createLabel("Rice Subsidy:"), gbc);
+
+        gbc.gridx = 1;
+        riceSubsidyField = createTextField(15, true);
+        riceSubsidyField.setEditable(true);
+        riceSubsidyField.addFocusListener(new ValidationFocusListener(f -> {
+            validateField("riceSubsidy", riceSubsidyField.getText(),
+                    validator.validateNumeric(riceSubsidyField.getText(), "Rice subsidy", 0, 10000));
+            calculateDerivedFields();
+        }));
+        riceSubsidyField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                calculateDerivedFields();
+            }
+        });
+        panel.add(riceSubsidyField, gbc);
+        row++;
+
+        // Phone Allowance
+        gbc.gridx = 0; gbc.gridy = row;
+        panel.add(createLabel("Phone Allowance:"), gbc);
+
+        gbc.gridx = 1;
+        phoneAllowanceField = createTextField(15, true);
+        phoneAllowanceField.setEditable(true);
+        phoneAllowanceField.addFocusListener(new ValidationFocusListener(f -> {
+            validateField("phoneAllowance", phoneAllowanceField.getText(),
+                    validator.validateNumeric(phoneAllowanceField.getText(), "Phone allowance", 0, 10000));
+            calculateDerivedFields();
+        }));
+        phoneAllowanceField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                calculateDerivedFields();
+            }
+        });
+        panel.add(phoneAllowanceField, gbc);
+        row++;
+
+        // Clothing Allowance
+        gbc.gridx = 0; gbc.gridy = row;
+        panel.add(createLabel("Clothing Allowance:"), gbc);
+
+        gbc.gridx = 1;
+        clothingAllowanceField = createTextField(15, true);
+        clothingAllowanceField.setEditable(true);
+        clothingAllowanceField.addFocusListener(new ValidationFocusListener(f -> {
+            validateField("clothingAllowance", clothingAllowanceField.getText(),
+                    validator.validateNumeric(clothingAllowanceField.getText(), "Clothing allowance", 0, 10000));
+            calculateDerivedFields();
+        }));
+        clothingAllowanceField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                calculateDerivedFields();
+            }
+        });
+        panel.add(clothingAllowanceField, gbc);
+        row++;
+
+        // Gross Semi-monthly Rate (NOW EDITABLE)
+        gbc.gridx = 0; gbc.gridy = row;
+        panel.add(createLabel("Gross Semi-monthly Rate:"), gbc);
+
+        gbc.gridx = 1;
+        grossSemiMonthlyField = createTextField(15, true);
+        grossSemiMonthlyField.setEditable(true);
+        grossSemiMonthlyField.setBackground(UITheme.CARD_BG);
+        grossSemiMonthlyField.addFocusListener(new ValidationFocusListener(f ->
+                validateField("grossSemiMonthly", grossSemiMonthlyField.getText(),
+                        validator.validateNumeric(grossSemiMonthlyField.getText(), "Gross semi-monthly rate", 0, 500000))));
+        grossSemiMonthlyField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                // Optionally recalculate basic salary from gross semi-monthly
+                // You could add logic here if needed
+            }
+        });
+        panel.add(grossSemiMonthlyField, gbc);
+        row++;
+
+        // Hourly Rate (NOW EDITABLE)
+        gbc.gridx = 0; gbc.gridy = row;
+        panel.add(createLabel("Hourly Rate:"), gbc);
+
+        gbc.gridx = 1;
+        hourlyRateField = createTextField(15, true);
+        hourlyRateField.setEditable(true);
+        hourlyRateField.setBackground(UITheme.CARD_BG);
+        hourlyRateField.addFocusListener(new ValidationFocusListener(f ->
+                validateField("hourlyRate", hourlyRateField.getText(),
+                        validator.validateNumeric(hourlyRateField.getText(), "Hourly rate", 0, 5000))));
+        hourlyRateField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                // Optionally recalculate basic salary from hourly rate
+                // You could add logic here if needed
+            }
+        });
+        panel.add(hourlyRateField, gbc);
+        row++;
+
+        // ========== SECTION 5: GOVERNMENT IDS ==========
         row = addSectionHeader(panel, gbc, row, "GOVERNMENT IDS");
 
-        // SSS
+        // SSS #
         gbc.gridx = 0; gbc.gridy = row;
         panel.add(createLabel("SSS #:"), gbc);
 
@@ -290,7 +405,23 @@ public class EmployeeDialog extends JDialog {
         panel.add(sssField, gbc);
         row++;
 
-        // TIN
+        // Philhealth #
+        gbc.gridx = 0; gbc.gridy = row;
+        panel.add(createLabel("Philhealth #:"), gbc);
+
+        gbc.gridx = 1;
+        philHealthField = createTextField(20, true);
+        philHealthField.setEditable(true);
+        philHealthField.addFocusListener(new ValidationFocusListener(f -> {
+            GovernmentIds gov = new GovernmentIds();
+            gov.setPhilHealthNumber(philHealthField.getText().trim());
+            validateField("philHealth", philHealthField.getText(),
+                    validator.validateGovernmentIds(gov));
+        }));
+        panel.add(philHealthField, gbc);
+        row++;
+
+        // TIN #
         gbc.gridx = 0; gbc.gridy = row;
         panel.add(createLabel("TIN #:"), gbc);
 
@@ -306,36 +437,20 @@ public class EmployeeDialog extends JDialog {
         panel.add(tinField, gbc);
         row++;
 
-        // PhilHealth
+        // Pag-ibig #
         gbc.gridx = 0; gbc.gridy = row;
-        panel.add(createLabel("PHILHEALTH #:"), gbc);
+        panel.add(createLabel("Pag-ibig #:"), gbc);
 
         gbc.gridx = 1;
-        philField = createTextField(20, true);
-        philField.setEditable(true);
-        philField.addFocusListener(new ValidationFocusListener(f -> {
+        pagIbigField = createTextField(20, true);
+        pagIbigField.setEditable(true);
+        pagIbigField.addFocusListener(new ValidationFocusListener(f -> {
             GovernmentIds gov = new GovernmentIds();
-            gov.setPhilHealthNumber(philField.getText().trim());
-            validateField("philHealth", philField.getText(),
+            gov.setPagIbigNumber(pagIbigField.getText().trim());
+            validateField("pagIbig", pagIbigField.getText(),
                     validator.validateGovernmentIds(gov));
         }));
-        panel.add(philField, gbc);
-        row++;
-
-        // Pag-IBIG
-        gbc.gridx = 0; gbc.gridy = row;
-        panel.add(createLabel("PAG-IBIG #:"), gbc);
-
-        gbc.gridx = 1;
-        pagibigField = createTextField(20, true);
-        pagibigField.setEditable(true);
-        pagibigField.addFocusListener(new ValidationFocusListener(f -> {
-            GovernmentIds gov = new GovernmentIds();
-            gov.setPagIbigNumber(pagibigField.getText().trim());
-            validateField("pagIbig", pagibigField.getText(),
-                    validator.validateGovernmentIds(gov));
-        }));
-        panel.add(pagibigField, gbc);
+        panel.add(pagIbigField, gbc);
 
         return panel;
     }
@@ -344,7 +459,7 @@ public class EmployeeDialog extends JDialog {
         gbc.gridx = 0;
         gbc.gridy = row;
         gbc.gridwidth = 2;
-        gbc.insets = new Insets(15, 8, 8, 8);
+        gbc.insets = new Insets(20, 8, 8, 8);
 
         JLabel header = new JLabel(title);
         header.setFont(UITheme.SUBHEADER_FONT);
@@ -352,7 +467,7 @@ public class EmployeeDialog extends JDialog {
         panel.add(header, gbc);
 
         gbc.gridwidth = 1;
-        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.insets = new Insets(6, 8, 6, 8);
         return row + 1;
     }
 
@@ -393,6 +508,19 @@ public class EmployeeDialog extends JDialog {
         return panel;
     }
 
+    private void calculateDerivedFields() {
+        try {
+            double basicSalary = Double.parseDouble(basicSalaryField.getText().trim().replace(",", ""));
+            double grossSemiMonthly = basicSalary / 2;
+            double hourlyRate = basicSalary / 168;
+
+            grossSemiMonthlyField.setText(String.format("%,.0f", grossSemiMonthly));
+            hourlyRateField.setText(String.format("%.2f", hourlyRate));
+        } catch (NumberFormatException e) {
+            // Ignore if basic salary not valid
+        }
+    }
+
     private void validateField(String fieldName, String value, ValidationService.ValidationResult result) {
         JTextField field = getFieldByName(fieldName);
         if (field == null) return;
@@ -415,14 +543,19 @@ public class EmployeeDialog extends JDialog {
         switch (fieldName) {
             case "lastName": return lastNameField;
             case "firstName": return firstNameField;
-            case "address": return addressField;
+            case "address": return null; // Address is JTextArea
             case "phone": return phoneField;
-            case "email": return emailField;
-            case "salary": return salaryField;
+            case "email": return null; // Email is auto-generated
+            case "salary": return basicSalaryField;
+            case "riceSubsidy": return riceSubsidyField;
+            case "phoneAllowance": return phoneAllowanceField;
+            case "clothingAllowance": return clothingAllowanceField;
+            case "grossSemiMonthly": return grossSemiMonthlyField;
+            case "hourlyRate": return hourlyRateField;
             case "sss": return sssField;
             case "tin": return tinField;
-            case "philHealth": return philField;
-            case "pagIbig": return pagibigField;
+            case "philHealth": return philHealthField;
+            case "pagIbig": return pagIbigField;
             case "birthDate": return birthDateField;
             default: return null;
         }
@@ -453,19 +586,27 @@ public class EmployeeDialog extends JDialog {
     private void setDefaultValues() {
         lastNameField.setText("");
         firstNameField.setText("");
-        addressField.setText("");
+        addressArea.setText("");
+        birthDateField.setText(LocalDate.now().minusYears(25).format(DateTimeFormatter.ofPattern("MM/dd/yyyy")));
         phoneField.setText("");
-        emailField.setText("");
+
         positionField.setText("");
         supervisorField.setText("");
-        salaryField.setText("25000");
-        birthDateField.setText(LocalDate.now().minusYears(25).toString());
+
+        basicSalaryField.setText("25000");
+        riceSubsidyField.setText("1500");
+        phoneAllowanceField.setText("500");
+        clothingAllowanceField.setText("500");
+
+        calculateDerivedFields();
+
         statusCombo.setSelectedIndex(0);
         employeeTypeCombo.setSelectedIndex(0);
+
         sssField.setText("");
+        philHealthField.setText("");
         tinField.setText("");
-        philField.setText("");
-        pagibigField.setText("");
+        pagIbigField.setText("");
     }
 
     private void loadData() {
@@ -474,19 +615,28 @@ public class EmployeeDialog extends JDialog {
         empIdField.setText(employee.getEmployeeId());
         lastNameField.setText(employee.getLastName());
         firstNameField.setText(employee.getFirstName());
-        addressField.setText(employee.getAddress());
-        phoneField.setText(employee.getPhoneNumber());
-        emailField.setText(employee.getEmail());
-        positionField.setText(employee.getPosition());
-        supervisorField.setText(employee.getImmediateSupervisor());
-        salaryField.setText(String.valueOf((int) employee.getBasicSalary()));
+        addressArea.setText(employee.getAddress());
 
-        // Set birth date
+        // Birth date
         if (employee.getBirthDate() != null) {
-            birthDateField.setText(employee.getBirthDate().toString());
+            birthDateField.setText(employee.getBirthDate().format(DateTimeFormatter.ofPattern("MM/dd/yyyy")));
         }
 
-        // Set status
+        phoneField.setText(employee.getPhoneNumber());
+        positionField.setText(employee.getPosition());
+        supervisorField.setText(employee.getImmediateSupervisor());
+
+        // Salary and allowances
+        basicSalaryField.setText(String.valueOf((int) employee.getBasicSalary()));
+        riceSubsidyField.setText(String.valueOf((int) employee.getRiceSubsidy()));
+        phoneAllowanceField.setText(String.valueOf((int) employee.getPhoneAllowance()));
+        clothingAllowanceField.setText(String.valueOf((int) employee.getClothingAllowance()));
+
+        // Gross semi-monthly and hourly rate
+        grossSemiMonthlyField.setText(String.format("%,.0f", employee.getBasicSalary() / 2));
+        hourlyRateField.setText(String.format("%.2f", employee.getBasicSalary() / 168));
+
+        // Status
         if (employee.getStatus() != null) {
             String status = employee.getStatus().toString();
             if ("REGULAR".equals(status)) {
@@ -498,7 +648,7 @@ public class EmployeeDialog extends JDialog {
             }
         }
 
-        // Set employee type based on instance
+        // Employee type
         if (employee instanceof ProbationaryEmployee) {
             employeeTypeCombo.setSelectedIndex(1);
         } else if (employee instanceof HREmployee) {
@@ -513,13 +663,13 @@ public class EmployeeDialog extends JDialog {
             employeeTypeCombo.setSelectedIndex(0);
         }
 
-        // Set government IDs
+        // Government IDs
         if (employee.getGovernmentIds() != null) {
             GovernmentIds gov = employee.getGovernmentIds();
             sssField.setText(gov.getSssNumber() != null ? gov.getSssNumber() : "");
+            philHealthField.setText(gov.getPhilHealthNumber() != null ? gov.getPhilHealthNumber() : "");
             tinField.setText(gov.getTinNumber() != null ? gov.getTinNumber() : "");
-            philField.setText(gov.getPhilHealthNumber() != null ? gov.getPhilHealthNumber() : "");
-            pagibigField.setText(gov.getPagIbigNumber() != null ? gov.getPagIbigNumber() : "");
+            pagIbigField.setText(gov.getPagIbigNumber() != null ? gov.getPagIbigNumber() : "");
         }
     }
 
@@ -574,23 +724,21 @@ public class EmployeeDialog extends JDialog {
         emp.setEmployeeId(empIdField.getText().trim());
         emp.setLastName(lastNameField.getText().trim().toUpperCase());
         emp.setFirstName(firstNameField.getText().trim());
-        emp.setAddress(addressField.getText().trim());
+        emp.setAddress(addressArea.getText().trim());
         emp.setPhoneNumber(phoneField.getText().trim());
-        emp.setEmail(emailField.getText().trim());
+
+        // Generate email
+        emp.setEmail(generateEmail(emp.getFirstName(), emp.getLastName()));
+
+        // Position and supervisor
         emp.setPosition(positionField.getText().trim());
         emp.setImmediateSupervisor(supervisorField.getText().trim());
         emp.setStatus(EmploymentStatus.fromString(selectedStatus));
 
-        // Set salary
-        double salary = Double.parseDouble(salaryField.getText().trim().replace(",", ""));
-        emp.setBasicSalary(salary);
-        emp.setRiceSubsidy(1500);
-        emp.setPhoneAllowance(500);
-        emp.setClothingAllowance(500);
-
-        // Set birth date
+        // Parse birth date
         try {
-            LocalDate birthDate = LocalDate.parse(birthDateField.getText().trim());
+            LocalDate birthDate = LocalDate.parse(birthDateField.getText().trim(),
+                    DateTimeFormatter.ofPattern("MM/dd/yyyy"));
             emp.setBirthDate(birthDate);
             emp.setHireDate(birthDate.plusYears(20));
         } catch (Exception e) {
@@ -598,12 +746,41 @@ public class EmployeeDialog extends JDialog {
             emp.setHireDate(LocalDate.now().minusYears(1));
         }
 
-        // Set government IDs
+        // Salary and allowances - prioritize values entered directly
+        try {
+            double basicSalary = Double.parseDouble(basicSalaryField.getText().trim().replace(",", ""));
+            emp.setBasicSalary(basicSalary);
+        } catch (NumberFormatException e) {
+            // Keep existing value
+        }
+
+        try {
+            double riceSubsidy = Double.parseDouble(riceSubsidyField.getText().trim().replace(",", ""));
+            emp.setRiceSubsidy(riceSubsidy);
+        } catch (NumberFormatException e) {
+            // Keep existing value
+        }
+
+        try {
+            double phoneAllowance = Double.parseDouble(phoneAllowanceField.getText().trim().replace(",", ""));
+            emp.setPhoneAllowance(phoneAllowance);
+        } catch (NumberFormatException e) {
+            // Keep existing value
+        }
+
+        try {
+            double clothingAllowance = Double.parseDouble(clothingAllowanceField.getText().trim().replace(",", ""));
+            emp.setClothingAllowance(clothingAllowance);
+        } catch (NumberFormatException e) {
+            // Keep existing value
+        }
+
+        // Government IDs
         GovernmentIds govIds = new GovernmentIds();
         govIds.setSssNumber(sssField.getText().trim());
+        govIds.setPhilHealthNumber(philHealthField.getText().trim());
         govIds.setTinNumber(tinField.getText().trim());
-        govIds.setPhilHealthNumber(philField.getText().trim());
-        govIds.setPagIbigNumber(pagibigField.getText().trim());
+        govIds.setPagIbigNumber(pagIbigField.getText().trim());
         emp.setGovernmentIds(govIds);
 
         // Set probation details if applicable
@@ -637,6 +814,13 @@ public class EmployeeDialog extends JDialog {
         } else {
             return new RegularEmployee();
         }
+    }
+
+    private String generateEmail(String firstName, String lastName) {
+        if (firstName == null || lastName == null) return null;
+        String cleanFirst = firstName.split(" ")[0].toLowerCase().replaceAll("[^a-z]", "");
+        String cleanLast = lastName.split(" ")[0].toLowerCase().replaceAll("[^a-z]", "");
+        return cleanFirst + "." + cleanLast + "@motorph.com";
     }
 
     public boolean isSaved() {
