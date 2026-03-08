@@ -17,9 +17,9 @@ public class Attendance {
     private double lateHours;
     private String status;
     private String remarks;
-    
+
     // ========== GETTERS ==========
-    
+
     public String getEmployeeId() { return employeeId; }
     public String getLastName() { return lastName; }
     public String getFirstName() { return firstName; }
@@ -29,11 +29,16 @@ public class Attendance {
     public double getHoursWorked() { return hoursWorked; }
     public double getOvertimeHours() { return overtimeHours; }
     public double getLateHours() { return lateHours; }
-    public String getStatus() { return status; }
+
+    public String getStatus() {
+        System.out.println("Getting status: " + status);
+        return status;
+    }
+
     public String getRemarks() { return remarks; }
-    
+
     // ========== SETTERS ==========
-    
+
     public void setEmployeeId(String employeeId) { this.employeeId = employeeId; }
     public void setLastName(String lastName) { this.lastName = lastName; }
     public void setFirstName(String firstName) { this.firstName = firstName; }
@@ -43,39 +48,42 @@ public class Attendance {
     public void setHoursWorked(double hoursWorked) { this.hoursWorked = hoursWorked; }
     public void setOvertimeHours(double overtimeHours) { this.overtimeHours = overtimeHours; }
     public void setLateHours(double lateHours) { this.lateHours = lateHours; }
-    public void setStatus(String status) { this.status = status; }
+    public void setStatus(String status) {
+        System.out.println("Setting status to: " + status);
+        this.status = status;
+    }
     public void setRemarks(String remarks) { this.remarks = remarks; }
-    
+
     // ========== BUSINESS METHODS ==========
-    
+
     public String getFullName() {
         return firstName + " " + lastName;
     }
-    
+
     public String getFormattedDate() {
         return date != null ? date.format(DateTimeFormatter.ofPattern("MM/dd/yyyy")) : "";
     }
-    
+
     public String getFormattedTimeIn() {
         return timeIn != null ? timeIn.format(DateTimeFormatter.ofPattern("hh:mm a")) : "";
     }
-    
+
     public String getFormattedTimeOut() {
         return timeOut != null ? timeOut.format(DateTimeFormatter.ofPattern("hh:mm a")) : "";
     }
-    
+
     public String getFormattedHoursWorked() {
         return String.format("%.1f hrs", hoursWorked);
     }
-    
+
     public String getFormattedOvertime() {
         return overtimeHours > 0 ? String.format("%.1f hrs", overtimeHours) : "";
     }
-    
+
     public String getFormattedLate() {
         return lateHours > 0 ? String.format("%.1f hrs", lateHours) : "";
     }
-    
+
     public String getStatusBadge() {
         return status;
     }

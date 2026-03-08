@@ -42,7 +42,17 @@ public class UserService {
             System.out.println("User role from CSV: " + user.getRole());
             System.out.println("User has employee: " + (user.getEmployee() != null));
             if (user.getEmployee() != null) {
+                System.out.println("Employee name: " + user.getEmployee().getFullName());
+                System.out.println("Employee ID: " + user.getEmployee().getEmployeeId());
                 System.out.println("Employee class: " + user.getEmployee().getClass().getSimpleName());
+            } else {
+                System.out.println("WARNING: User has no employee object! Attempting to reload...");
+                // Try to reload employee
+                Employee emp = employeeDAO.findByEmployeeId(username);
+                if (emp != null) {
+                    user.setEmployee(emp);
+                    System.out.println("Reloaded employee: " + emp.getFullName());
+                }
             }
             System.out.println("Password match: " + user.getPassword().equals(password));
             System.out.println("User active: " + user.isActive());
@@ -51,6 +61,7 @@ public class UserService {
                 currentUser = user;
                 System.out.println("Login successful for: " + username);
                 System.out.println("Final user role: " + currentUser.getRole());
+                System.out.println("Final employee ID: " + currentUser.getEmployeeId());
                 return true;
             }
         }
@@ -104,10 +115,6 @@ public class UserService {
         newUser.setEmployee(emp);
         newUser.setActive(true);
 
-        // Role will be automatically set by setEmployee method
-        User.Role role = newUser.getRole();
-        System.out.println("Assigned role from employee: " + role);
-
         boolean added = userDAO.addUser(newUser);
         if (added) {
             System.out.println("User auto-created for employee: " + employeeId);
@@ -125,7 +132,7 @@ public class UserService {
             admin.setUsername("admin");
             admin.setPassword("admin123");
             admin.setActive(true);
-            admin.setRole(User.Role.ADMIN); // Explicitly set role
+            admin.setRole(User.Role.ADMIN);
 
             boolean added = userDAO.addUser(admin);
             if (added) {
@@ -139,6 +146,15 @@ public class UserService {
     }
 
     public User getCurrentUser() {
+        // Ensure current user has employee object
+        if (currentUser != null && currentUser.getEmployee() == null) {
+            System.out.println("Current user has no employee, attempting to reload...");
+            Employee emp = employeeDAO.findByEmployeeId(currentUser.getUsername());
+            if (emp != null) {
+                currentUser.setEmployee(emp);
+                System.out.println("Reloaded employee: " + emp.getFullName());
+            }
+        }
         return currentUser;
     }
 
@@ -159,7 +175,6 @@ public class UserService {
     }
 
     public boolean addUser(User user) {
-        // Ensure role is set before adding
         if (user.getRole() == null && user.getEmployee() != null) {
             user.setRole(user.determineRoleFromEmployee(user.getEmployee()));
         }
@@ -167,7 +182,6 @@ public class UserService {
     }
 
     public boolean updateUser(User user) {
-        // Ensure role is set before updating
         if (user.getRole() == null && user.getEmployee() != null) {
             user.setRole(user.determineRoleFromEmployee(user.getEmployee()));
         }

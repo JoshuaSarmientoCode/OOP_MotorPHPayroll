@@ -24,7 +24,7 @@ public class UserDAO extends BaseDAO<User> {
     @Override
     public User fromCSV(String csvLine) {
         String[] data = parseCSVLine(csvLine);
-        if (data.length < 4) return null; // Now need at least 4 fields (Role is optional for backward compatibility)
+        if (data.length < 4) return null;
 
         User user = new User();
 
@@ -36,14 +36,19 @@ public class UserDAO extends BaseDAO<User> {
             String empId = safeGet(data, 2);
             if (!empId.isEmpty() && employeeDAO != null) {
                 Employee emp = employeeDAO.findByEmployeeId(empId);
-                user.setEmployee(emp);
+                if (emp != null) {
+                    user.setEmployee(emp);
+                    System.out.println("Loaded employee for user " + user.getUsername() + ": " + emp.getFullName());
+                } else {
+                    System.out.println("Warning: Employee not found for ID: " + empId);
+                }
             }
 
             // Parse Is Active
             String activeStr = safeGet(data, 3);
             user.setActive(!"false".equalsIgnoreCase(activeStr));
 
-            // Parse Role if present (for backward compatibility)
+            // Parse Role if present
             if (data.length > 4 && !safeGet(data, 4).isEmpty()) {
                 String roleStr = safeGet(data, 4);
                 try {
@@ -51,20 +56,13 @@ public class UserDAO extends BaseDAO<User> {
                     user.setRole(role);
                     System.out.println("Loaded user " + user.getUsername() + " with stored role: " + role);
                 } catch (IllegalArgumentException e) {
-                    // If role string is invalid, ignore and let it be determined from employee
-                    System.out.println("Invalid role string in CSV: " + roleStr + ", will determine from employee");
-                }
-            } else {
-                // If no role in CSV, determine from employee
-                if (user.getEmployee() != null) {
-                    User.Role determinedRole = user.determineRoleFromEmployee(user.getEmployee());
-                    user.setRole(determinedRole);
-                    System.out.println("Determined role for user " + user.getUsername() + ": " + determinedRole);
+                    System.out.println("Invalid role string in CSV: " + roleStr);
                 }
             }
 
         } catch (Exception e) {
             LOGGER.warning("Error parsing user: " + e.getMessage());
+            e.printStackTrace();
             return null;
         }
 
@@ -75,25 +73,12 @@ public class UserDAO extends BaseDAO<User> {
     public String toCSV(User user) {
         List<String> fields = new ArrayList<>();
 
-        // Username
         fields.add(user.getUsername());
-
-        // Password
         fields.add(user.getPassword());
-
-        // Employee ID
         fields.add(user.getEmployeeId() != null ? user.getEmployeeId() : "");
-
-        // Is Active
         fields.add(String.valueOf(user.isActive()));
+        fields.add(user.getRole() != null ? user.getRole().toString() : "EMPLOYEE");
 
-        // Role - CRITICAL: Store the role in CSV
-        User.Role role = user.getRole();
-        fields.add(role != null ? role.toString() : "EMPLOYEE");
-
-        System.out.println("Writing user to CSV: " + user.getUsername() + " with role: " + role);
-
-        // Return as a single line without any newline characters
         return String.join(",", fields);
     }
 
@@ -152,7 +137,6 @@ public class UserDAO extends BaseDAO<User> {
     }
 
     public boolean addUser(User user) {
-        // Ensure role is set before saving
         if (user.getRole() == null && user.getEmployee() != null) {
             user.setRole(user.determineRoleFromEmployee(user.getEmployee()));
         }
@@ -161,23 +145,9 @@ public class UserDAO extends BaseDAO<User> {
     }
 
     public boolean updateUser(User user) {
-        // Ensure role is set before updating
         if (user.getRole() == null && user.getEmployee() != null) {
             user.setRole(user.determineRoleFromEmployee(user.getEmployee()));
         }
-        System.out.println("Updating user: " + user.getUsername() + " with role: " + user.getRole());
         return update(user);
-    }
-
-    @Override
-    public boolean add(User item) {
-        // Override to add debug info
-        boolean result = super.add(item);
-        if (result) {
-            System.out.println("User successfully added to cache and file");
-        } else {
-            System.out.println("Failed to add user");
-        }
-        return result;
     }
 }

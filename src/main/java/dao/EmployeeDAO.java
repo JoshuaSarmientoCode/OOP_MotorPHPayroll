@@ -35,79 +35,96 @@ public class EmployeeDAO extends BaseDAO<Employee> {
         }
 
         try {
-            // Basic info
-            String employeeId = fields.get(0).trim();
-            String lastName = fields.get(1).trim();
-            String firstName = fields.get(2).trim();
-            String position = fields.size() > 11 ? fields.get(11).trim() : "";
-            String statusStr = fields.size() > 10 ? fields.get(10).trim() : "Regular";
+            // Debug: Print field count
+            System.out.println("Parsing employee line with " + fields.size() + " fields");
 
-            // Create appropriate employee type
-            Employee emp = createEmployeeByPositionAndStatus(position, statusStr);
+            // Extract fields by index - MATCHING YOUR CSV STRUCTURE
+            String employeeId = fields.get(0).trim();           // Employee #
+            String lastName = fields.get(1).trim();             // Last Name
+            String firstName = fields.get(2).trim();            // First Name
+            String birthday = fields.get(3).trim();             // Birthday
+            String address = fields.get(4).trim();              // Address
+            String phoneNumber = fields.get(5).trim();          // Phone Number
+            String sss = fields.get(6).trim();                  // SSS #
+            String philhealth = fields.get(7).trim();           // Philhealth #
+            String tin = fields.get(8).trim();                  // TIN #
+            String pagibig = fields.get(9).trim();              // Pag-ibig #
+            String status = fields.get(10).trim();              // Status
+            String position = fields.get(11).trim();            // Position
+            String supervisor = fields.get(12).trim();          // Immediate Supervisor
 
+            // Salary fields - THESE ARE THE ONLY ONES THAT SHOULD GO TO parseCurrency
+            String basicSalaryStr = fields.size() > 13 ? fields.get(13).trim() : "0";
+            String riceSubsidyStr = fields.size() > 14 ? fields.get(14).trim() : "0";
+            String phoneAllowanceStr = fields.size() > 15 ? fields.get(15).trim() : "0";
+            String clothingAllowanceStr = fields.size() > 16 ? fields.get(16).trim() : "0";
+
+            // These are calculated fields - we can ignore them when reading
+            // String grossSemiMonthlyStr = fields.size() > 17 ? fields.get(17).trim() : "0";
+            // String hourlyRateStr = fields.size() > 18 ? fields.get(18).trim() : "0";
+
+            // Create appropriate employee type based on position and status
+            Employee emp = createEmployeeByPositionAndStatus(position, status);
+
+            // Set basic info
             emp.setEmployeeId(employeeId);
             emp.setLastName(lastName);
             emp.setFirstName(firstName);
 
             // Birthday
-            if (fields.size() > 3 && !fields.get(3).trim().isEmpty() && !fields.get(3).trim().equals("N/A")) {
+            if (!birthday.isEmpty() && !birthday.equals("N/A")) {
                 try {
-                    emp.setBirthDate(LocalDate.parse(fields.get(3).trim(), DATE_FORMATTER));
+                    emp.setBirthDate(LocalDate.parse(birthday, DATE_FORMATTER));
                 } catch (Exception e) {
-                    // Ignore birthday parsing errors
+                    LOGGER.warning("Could not parse birthday: " + birthday);
                 }
             }
 
-            // Address
-            String address = fields.size() > 4 ? fields.get(4).trim() : "";
+            // Address (remove quotes if present)
+            if (address.startsWith("\"") && address.endsWith("\"")) {
+                address = address.substring(1, address.length() - 1);
+            }
             emp.setAddress(address);
 
             // Phone
-            String phone = fields.size() > 5 ? fields.get(5).trim() : "";
-            emp.setPhoneNumber(phone);
+            emp.setPhoneNumber(phoneNumber);
 
             // Government IDs
             GovernmentIds govIds = new GovernmentIds();
-            if (fields.size() > 6) govIds.setSssNumber(fields.get(6).trim());
-            if (fields.size() > 7) govIds.setPhilHealthNumber(fields.get(7).trim());
-            if (fields.size() > 8) govIds.setTinNumber(fields.get(8).trim());
-            if (fields.size() > 9) govIds.setPagIbigNumber(fields.get(9).trim());
+            govIds.setSssNumber(sss);
+            govIds.setPhilHealthNumber(philhealth);
+            govIds.setTinNumber(tin);
+            govIds.setPagIbigNumber(pagibig);
             emp.setGovernmentIds(govIds);
 
             // Status and Position
-            emp.setStatus(statusStr);
+            emp.setStatus(status);
             emp.setPosition(position);
 
             // Supervisor
-            if (fields.size() > 12) {
-                String supervisor = fields.get(12).trim();
-                if (!supervisor.equals("N/A") && !supervisor.isEmpty()) {
-                    emp.setImmediateSupervisor(supervisor);
-                }
+            if (!supervisor.equals("N/A") && !supervisor.isEmpty()) {
+                emp.setImmediateSupervisor(supervisor);
             }
 
             // ========== SALARY FIELDS PARSING ==========
-            // Basic Salary (column 13)
-            if (fields.size() > 13) {
-                double basicSalary = parseCurrency(fields.get(13));
+            // Only parse these fields - they are the numeric ones
+            if (!basicSalaryStr.isEmpty() && !basicSalaryStr.equals("N/A")) {
+                double basicSalary = parseCurrency(basicSalaryStr);
                 emp.setBasicSalary(basicSalary);
             }
 
-            // Rice Subsidy (column 14)
-            if (fields.size() > 14) {
-                double riceSubsidy = parseCurrency(fields.get(14));
+            if (!riceSubsidyStr.isEmpty() && !riceSubsidyStr.equals("N/A")) {
+                double riceSubsidy = parseCurrency(riceSubsidyStr);
                 emp.setRiceSubsidy(riceSubsidy);
             }
 
-            // Phone Allowance (column 15)
-            if (fields.size() > 15) {
-                double phoneAllowance = parseCurrency(fields.get(15));
+            if (!phoneAllowanceStr.isEmpty() && !phoneAllowanceStr.equals("N/A")) {
+                double phoneAllowance = parseCurrency(phoneAllowanceStr);
                 emp.setPhoneAllowance(phoneAllowance);
             }
 
-            // Clothing Allowance (column 16)
-            if (fields.size() > 16) {
-                double clothingAllowance = parseCurrency(fields.get(16));
+            if (!clothingAllowanceStr.isEmpty() && !clothingAllowanceStr.equals("N/A")) {
+                double clothingAllowance = parseCurrency(clothingAllowanceStr);
                 emp.setClothingAllowance(clothingAllowance);
             }
 
@@ -121,10 +138,12 @@ public class EmployeeDAO extends BaseDAO<Employee> {
                 emp.setHireDate(LocalDate.now().minusYears(1));
             }
 
+            System.out.println("Successfully parsed employee: " + employeeId + " - " + firstName + " " + lastName);
             return emp;
 
         } catch (Exception e) {
             LOGGER.warning("Error parsing employee: " + e.getMessage());
+            e.printStackTrace();
             return null;
         }
     }
@@ -234,9 +253,10 @@ public class EmployeeDAO extends BaseDAO<Employee> {
 
     /**
      * Parse currency value that may contain quotes and commas
+     * ONLY call this on actual numeric fields
      */
     private double parseCurrency(String value) {
-        if (value == null || value.trim().isEmpty()) {
+        if (value == null || value.trim().isEmpty() || value.equals("N/A")) {
             return 0.0;
         }
 
@@ -247,8 +267,11 @@ public class EmployeeDAO extends BaseDAO<Employee> {
             // Remove commas (thousands separators)
             String withoutCommas = withoutQuotes.replace(",", "");
 
+            // Remove any currency symbols
+            String withoutSymbols = withoutCommas.replace("₱", "").replace("PHP", "");
+
             // Trim any whitespace
-            String cleanValue = withoutCommas.trim();
+            String cleanValue = withoutSymbols.trim();
 
             if (cleanValue.isEmpty()) {
                 return 0.0;
@@ -276,20 +299,36 @@ public class EmployeeDAO extends BaseDAO<Employee> {
             return new ProbationaryEmployee();
         }
 
-        // Role-based creation
+        // Check for executive/admin positions
         if (pos.contains("chief") || pos.contains("ceo") || pos.contains("cfo") ||
-                pos.contains("coo") || pos.contains("cmo") || pos.contains("admin")) {
+                pos.contains("coo") || pos.contains("cmo") || pos.contains("admin") ||
+                pos.contains("executive") || pos.contains("president") ||
+                pos.contains("director") || (pos.contains("manager") && pos.contains("general"))) {
             return new AdminEmployee();
-        } else if (pos.contains("hr")) {
-            return new HREmployee();
-        } else if (pos.contains("finance") || pos.contains("account") || pos.contains("payroll")) {
-            return new FinanceEmployee();
-        } else if (pos.contains("it") || pos.contains("information technology") ||
-                pos.contains("system") || pos.contains("tech")) {
-            return new ITEmployee();
-        } else {
-            return new RegularEmployee();
         }
+
+        // Check for HR positions
+        if (pos.contains("hr") || pos.contains("human resources") ||
+                pos.contains("recruitment") || pos.contains("personnel")) {
+            return new HREmployee();
+        }
+
+        // Check for Finance positions
+        if (pos.contains("finance") || pos.contains("account") ||
+                pos.contains("payroll") || pos.contains("treasury") ||
+                pos.contains("audit") || pos.contains("bookkeeper")) {
+            return new FinanceEmployee();
+        }
+
+        // Check for IT positions
+        if (pos.contains("it") || pos.contains("information technology") ||
+                pos.contains("system") || pos.contains("tech") ||
+                pos.contains("developer") || pos.contains("programmer") ||
+                pos.contains("network") || pos.contains("support")) {
+            return new ITEmployee();
+        }
+
+        return new RegularEmployee();
     }
 
     /**
@@ -332,10 +371,14 @@ public class EmployeeDAO extends BaseDAO<Employee> {
 
     @Override
     public boolean delete(String id) {
-        return super.delete(id);
+        System.out.println("EmployeeDAO.delete called for ID: " + id);
+        boolean result = super.delete(id);
+        System.out.println("Delete result: " + result);
+        return result;
     }
 
     public boolean deleteEmployee(String employeeId) {
+        System.out.println("deleteEmployee called for ID: " + employeeId);
         return delete(employeeId);
     }
 

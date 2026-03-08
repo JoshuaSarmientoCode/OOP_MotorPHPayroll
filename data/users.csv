@@ -1,3 +1,4 @@
 Username,Password,Employee ID,Is Active,Role
 admin,admin123,,true,ADMIN
 10001,emp1,10001,true,ADMIN
+10005,emp5,10005,true,IT
