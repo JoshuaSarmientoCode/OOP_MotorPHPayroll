@@ -31,16 +31,21 @@ public class EmployeeDialog extends JDialog {
     private JTextField philHealthField;                 // Philhealth #
     private JTextField tinField;                         // TIN #
     private JTextField pagIbigField;                     // Pag-ibig #
-    private JComboBox<String> statusCombo;               // Status
+    private JComboBox<String> departmentCombo;           // Department (replaces Status)
     private JTextField positionField;                    // Position
     private JTextField supervisorField;                  // Immediate Supervisor
     private JTextField basicSalaryField;                 // Basic Salary
     private JTextField riceSubsidyField;                 // Rice Subsidy
     private JTextField phoneAllowanceField;              // Phone Allowance
     private JTextField clothingAllowanceField;           // Clothing Allowance
-    private JTextField grossSemiMonthlyField;            // Gross Semi-monthly Rate (NOW EDITABLE)
-    private JTextField hourlyRateField;                  // Hourly Rate (NOW EDITABLE)
+    private JTextField grossSemiMonthlyField;            // Gross Semi-monthly Rate
+    private JTextField hourlyRateField;                  // Hourly Rate
     private JComboBox<String> employeeTypeCombo;         // Employee Type (for classification)
+
+    // Department options - These determine the role
+    private static final String[] DEPARTMENTS = {
+            "ADMINISTRATION", "HUMAN RESOURCES", "INFORMATION TECHNOLOGY", "FINANCE", "OPERATIONS"
+    };
 
     // Validation tracking
     private Map<JTextField, Boolean> fieldValid = new HashMap<>();
@@ -224,17 +229,18 @@ public class EmployeeDialog extends JDialog {
         // ========== SECTION 3: EMPLOYMENT DETAILS ==========
         row = addSectionHeader(panel, gbc, row, "EMPLOYMENT DETAILS");
 
-        // Status
+        // Department (replaces Status)
         gbc.gridx = 0; gbc.gridy = row;
-        panel.add(createLabel("Status:*"), gbc);
+        panel.add(createLabel("Department:*"), gbc);
 
         gbc.gridx = 1;
-        statusCombo = new JComboBox<>(new String[]{"REGULAR", "PROBATIONARY", "CONTRACTUAL"});
-        statusCombo.setFont(UITheme.NORMAL_FONT);
-        statusCombo.setBackground(UITheme.CARD_BG);
-        statusCombo.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_COLOR));
-        statusCombo.setPreferredSize(new Dimension(200, 35));
-        panel.add(statusCombo, gbc);
+        departmentCombo = new JComboBox<>(DEPARTMENTS);
+        departmentCombo.setFont(UITheme.NORMAL_FONT);
+        departmentCombo.setBackground(UITheme.CARD_BG);
+        departmentCombo.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_COLOR));
+        departmentCombo.setPreferredSize(new Dimension(250, 35));
+        departmentCombo.addActionListener(e -> updateEmployeeTypeFromDepartment());
+        panel.add(departmentCombo, gbc);
         row++;
 
         // Position
@@ -344,45 +350,25 @@ public class EmployeeDialog extends JDialog {
         panel.add(clothingAllowanceField, gbc);
         row++;
 
-        // Gross Semi-monthly Rate (NOW EDITABLE)
+        // Gross Semi-monthly Rate
         gbc.gridx = 0; gbc.gridy = row;
         panel.add(createLabel("Gross Semi-monthly Rate:"), gbc);
 
         gbc.gridx = 1;
-        grossSemiMonthlyField = createTextField(15, true);
-        grossSemiMonthlyField.setEditable(true);
-        grossSemiMonthlyField.setBackground(UITheme.CARD_BG);
-        grossSemiMonthlyField.addFocusListener(new ValidationFocusListener(f ->
-                validateField("grossSemiMonthly", grossSemiMonthlyField.getText(),
-                        validator.validateNumeric(grossSemiMonthlyField.getText(), "Gross semi-monthly rate", 0, 500000))));
-        grossSemiMonthlyField.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyReleased(KeyEvent e) {
-                // Optionally recalculate basic salary from gross semi-monthly
-                // You could add logic here if needed
-            }
-        });
+        grossSemiMonthlyField = createTextField(15, false);
+        grossSemiMonthlyField.setEditable(false);
+        grossSemiMonthlyField.setBackground(new Color(245, 245, 245));
         panel.add(grossSemiMonthlyField, gbc);
         row++;
 
-        // Hourly Rate (NOW EDITABLE)
+        // Hourly Rate
         gbc.gridx = 0; gbc.gridy = row;
         panel.add(createLabel("Hourly Rate:"), gbc);
 
         gbc.gridx = 1;
-        hourlyRateField = createTextField(15, true);
-        hourlyRateField.setEditable(true);
-        hourlyRateField.setBackground(UITheme.CARD_BG);
-        hourlyRateField.addFocusListener(new ValidationFocusListener(f ->
-                validateField("hourlyRate", hourlyRateField.getText(),
-                        validator.validateNumeric(hourlyRateField.getText(), "Hourly rate", 0, 5000))));
-        hourlyRateField.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyReleased(KeyEvent e) {
-                // Optionally recalculate basic salary from hourly rate
-                // You could add logic here if needed
-            }
-        });
+        hourlyRateField = createTextField(15, false);
+        hourlyRateField.setEditable(false);
+        hourlyRateField.setBackground(new Color(245, 245, 245));
         panel.add(hourlyRateField, gbc);
         row++;
 
@@ -453,6 +439,32 @@ public class EmployeeDialog extends JDialog {
         panel.add(pagIbigField, gbc);
 
         return panel;
+    }
+
+    /**
+     * Automatically update Employee Type based on selected department
+     */
+    private void updateEmployeeTypeFromDepartment() {
+        String selectedDept = (String) departmentCombo.getSelectedItem();
+        if (selectedDept == null) return;
+
+        switch (selectedDept) {
+            case "ADMINISTRATION":
+                employeeTypeCombo.setSelectedItem("ADMIN EMPLOYEE");
+                break;
+            case "HUMAN RESOURCES":
+                employeeTypeCombo.setSelectedItem("HR EMPLOYEE");
+                break;
+            case "INFORMATION TECHNOLOGY":
+                employeeTypeCombo.setSelectedItem("IT EMPLOYEE");
+                break;
+            case "FINANCE":
+                employeeTypeCombo.setSelectedItem("FINANCE EMPLOYEE");
+                break;
+            case "OPERATIONS":
+                employeeTypeCombo.setSelectedItem("REGULAR EMPLOYEE");
+                break;
+        }
     }
 
     private int addSectionHeader(JPanel panel, GridBagConstraints gbc, int row, String title) {
@@ -550,8 +562,6 @@ public class EmployeeDialog extends JDialog {
             case "riceSubsidy": return riceSubsidyField;
             case "phoneAllowance": return phoneAllowanceField;
             case "clothingAllowance": return clothingAllowanceField;
-            case "grossSemiMonthly": return grossSemiMonthlyField;
-            case "hourlyRate": return hourlyRateField;
             case "sss": return sssField;
             case "tin": return tinField;
             case "philHealth": return philHealthField;
@@ -590,6 +600,7 @@ public class EmployeeDialog extends JDialog {
         birthDateField.setText(LocalDate.now().minusYears(25).format(DateTimeFormatter.ofPattern("MM/dd/yyyy")));
         phoneField.setText("");
 
+        departmentCombo.setSelectedIndex(0); // Default to ADMINISTRATION
         positionField.setText("");
         supervisorField.setText("");
 
@@ -600,13 +611,15 @@ public class EmployeeDialog extends JDialog {
 
         calculateDerivedFields();
 
-        statusCombo.setSelectedIndex(0);
         employeeTypeCombo.setSelectedIndex(0);
 
         sssField.setText("");
         philHealthField.setText("");
         tinField.setText("");
         pagIbigField.setText("");
+
+        // Update employee type based on default department
+        updateEmployeeTypeFromDepartment();
     }
 
     private void loadData() {
@@ -626,27 +639,26 @@ public class EmployeeDialog extends JDialog {
         positionField.setText(employee.getPosition());
         supervisorField.setText(employee.getImmediateSupervisor());
 
+        // Set department based on employee type
+        if (employee instanceof AdminEmployee) {
+            departmentCombo.setSelectedItem("ADMINISTRATION");
+        } else if (employee instanceof HREmployee) {
+            departmentCombo.setSelectedItem("HUMAN RESOURCES");
+        } else if (employee instanceof ITEmployee) {
+            departmentCombo.setSelectedItem("INFORMATION TECHNOLOGY");
+        } else if (employee instanceof FinanceEmployee) {
+            departmentCombo.setSelectedItem("FINANCE");
+        } else {
+            departmentCombo.setSelectedItem("OPERATIONS");
+        }
+
         // Salary and allowances
         basicSalaryField.setText(String.valueOf((int) employee.getBasicSalary()));
         riceSubsidyField.setText(String.valueOf((int) employee.getRiceSubsidy()));
         phoneAllowanceField.setText(String.valueOf((int) employee.getPhoneAllowance()));
         clothingAllowanceField.setText(String.valueOf((int) employee.getClothingAllowance()));
 
-        // Gross semi-monthly and hourly rate
-        grossSemiMonthlyField.setText(String.format("%,.0f", employee.getBasicSalary() / 2));
-        hourlyRateField.setText(String.format("%.2f", employee.getBasicSalary() / 168));
-
-        // Status
-        if (employee.getStatus() != null) {
-            String status = employee.getStatus().toString();
-            if ("REGULAR".equals(status)) {
-                statusCombo.setSelectedIndex(0);
-            } else if ("PROBATIONARY".equals(status)) {
-                statusCombo.setSelectedIndex(1);
-            } else {
-                statusCombo.setSelectedIndex(2);
-            }
-        }
+        calculateDerivedFields();
 
         // Employee type
         if (employee instanceof ProbationaryEmployee) {
@@ -711,13 +723,13 @@ public class EmployeeDialog extends JDialog {
 
     private Employee buildEmployee() {
         String selectedType = (String) employeeTypeCombo.getSelectedItem();
-        String selectedStatus = (String) statusCombo.getSelectedItem();
+        String selectedDepartment = (String) departmentCombo.getSelectedItem();
 
         Employee emp;
         if (employee != null) {
             emp = employee;
         } else {
-            emp = createEmployeeByType(selectedType, selectedStatus);
+            emp = createEmployeeByType(selectedType, selectedDepartment);
         }
 
         // Set basic info
@@ -733,7 +745,13 @@ public class EmployeeDialog extends JDialog {
         // Position and supervisor
         emp.setPosition(positionField.getText().trim());
         emp.setImmediateSupervisor(supervisorField.getText().trim());
-        emp.setStatus(EmploymentStatus.fromString(selectedStatus));
+
+        // Set status based on employee type
+        if (selectedType != null && selectedType.contains("PROBATIONARY")) {
+            emp.setStatus(EmploymentStatus.PROBATIONARY);
+        } else {
+            emp.setStatus(EmploymentStatus.REGULAR);
+        }
 
         // Parse birth date
         try {
@@ -746,7 +764,7 @@ public class EmployeeDialog extends JDialog {
             emp.setHireDate(LocalDate.now().minusYears(1));
         }
 
-        // Salary and allowances - prioritize values entered directly
+        // Salary and allowances
         try {
             double basicSalary = Double.parseDouble(basicSalaryField.getText().trim().replace(",", ""));
             emp.setBasicSalary(basicSalary);
@@ -795,23 +813,50 @@ public class EmployeeDialog extends JDialog {
         return emp;
     }
 
-    private Employee createEmployeeByType(String type, String status) {
+    private Employee createEmployeeByType(String type, String department) {
         String typeUpper = type.toUpperCase();
-        String statusUpper = status.toUpperCase();
 
-        if ("PROBATIONARY".equals(statusUpper)) {
+        System.out.println("Creating employee with type: " + typeUpper + ", department: " + department);
+
+        // Check for probationary first
+        if (typeUpper.contains("PROBATIONARY")) {
+            System.out.println("-> Creating ProbationaryEmployee");
             return new ProbationaryEmployee();
         }
 
+        // Create based on department first (more reliable)
+        if (department != null) {
+            switch (department) {
+                case "ADMINISTRATION":
+                    System.out.println("-> Creating AdminEmployee from department");
+                    return new AdminEmployee();
+                case "HUMAN RESOURCES":
+                    System.out.println("-> Creating HREmployee from department");
+                    return new HREmployee();
+                case "INFORMATION TECHNOLOGY":
+                    System.out.println("-> Creating ITEmployee from department");
+                    return new ITEmployee();
+                case "FINANCE":
+                    System.out.println("-> Creating FinanceEmployee from department");
+                    return new FinanceEmployee();
+            }
+        }
+
+        // Fallback to type-based creation
         if (typeUpper.contains("HR")) {
+            System.out.println("-> Creating HREmployee from type");
             return new HREmployee();
         } else if (typeUpper.contains("FINANCE")) {
+            System.out.println("-> Creating FinanceEmployee from type");
             return new FinanceEmployee();
         } else if (typeUpper.contains("IT")) {
+            System.out.println("-> Creating ITEmployee from type");
             return new ITEmployee();
         } else if (typeUpper.contains("ADMIN")) {
+            System.out.println("-> Creating AdminEmployee from type");
             return new AdminEmployee();
         } else {
+            System.out.println("-> Creating RegularEmployee");
             return new RegularEmployee();
         }
     }

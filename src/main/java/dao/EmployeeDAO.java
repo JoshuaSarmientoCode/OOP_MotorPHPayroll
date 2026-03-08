@@ -19,84 +19,18 @@ public class EmployeeDAO extends BaseDAO<Employee> {
     };
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MM/dd/yyyy");
-    private List<Employee> employees;
-    private final String filePath;
 
     public EmployeeDAO(String filePath) {
         super(filePath);
-        this.filePath = filePath;
-        this.employees = new ArrayList<>();
-        loadData();
     }
 
-    private void loadData() {
-        this.employees = new ArrayList<>();
-        Path path = Paths.get(filePath);
-
-        if (!Files.exists(path)) {
-            LOGGER.warning("Employee file not found: " + filePath);
-            return;
-        }
-
-        System.out.println("========================================");
-        System.out.println("Loading employees from: " + filePath);
-        System.out.println("========================================");
-
-        try (BufferedReader reader = Files.newBufferedReader(path)) {
-            String line;
-            boolean isFirstLine = true;
-            int lineNumber = 0;
-            int successCount = 0;
-
-            while ((line = reader.readLine()) != null) {
-                lineNumber++;
-                if (isFirstLine) {
-                    isFirstLine = false;
-                    continue; // Skip header
-                }
-
-                if (line.trim().isEmpty()) {
-                    continue;
-                }
-
-                try {
-                    Employee emp = parseEmployee(line);
-                    if (emp != null) {
-                        employees.add(emp);
-                        successCount++;
-
-                        // Debug output for verification
-                        if (successCount <= 5) {
-                            System.out.println("\n--- Employee " + successCount + " ---");
-                            System.out.println("ID: " + emp.getEmployeeId());
-                            System.out.println("Name: " + emp.getFirstName() + " " + emp.getLastName());
-                            System.out.println("Basic Salary: " + emp.getBasicSalary());
-                            System.out.println("Rice Subsidy: " + emp.getRiceSubsidy());
-                            System.out.println("Phone Allowance: " + emp.getPhoneAllowance());
-                            System.out.println("Clothing Allowance: " + emp.getClothingAllowance());
-                        }
-                    }
-                } catch (Exception e) {
-                    System.err.println("Error parsing employee at line " + lineNumber + ": " + e.getMessage());
-                }
-            }
-
-            System.out.println("\n========================================");
-            System.out.println("Successfully loaded " + successCount + " employees from " + filePath);
-            System.out.println("========================================\n");
-
-        } catch (IOException e) {
-            System.err.println("Error reading employee file: " + e.getMessage());
-        }
-    }
-
-    private Employee parseEmployee(String csvLine) {
+    @Override
+    public Employee fromCSV(String csvLine) {
         // Use a proper CSV parser that handles quoted fields with commas
         List<String> fields = parseCSVLineProperly(csvLine);
 
         if (fields.size() < 17) {
-            System.err.println("Insufficient fields: expected at least 17 but got " + fields.size());
-            System.err.println("Line: " + csvLine);
+            LOGGER.warning("Insufficient fields: expected at least 17 but got " + fields.size());
             return null;
         }
 
@@ -153,34 +87,28 @@ public class EmployeeDAO extends BaseDAO<Employee> {
             }
 
             // ========== SALARY FIELDS PARSING ==========
-            // All salary fields need proper parsing to remove quotes and commas
-
             // Basic Salary (column 13)
             if (fields.size() > 13) {
                 double basicSalary = parseCurrency(fields.get(13));
                 emp.setBasicSalary(basicSalary);
-                System.out.println("  Basic Salary raw: '" + fields.get(13) + "' -> parsed: " + basicSalary);
             }
 
             // Rice Subsidy (column 14)
             if (fields.size() > 14) {
                 double riceSubsidy = parseCurrency(fields.get(14));
                 emp.setRiceSubsidy(riceSubsidy);
-                System.out.println("  Rice Subsidy raw: '" + fields.get(14) + "' -> parsed: " + riceSubsidy);
             }
 
             // Phone Allowance (column 15)
             if (fields.size() > 15) {
                 double phoneAllowance = parseCurrency(fields.get(15));
                 emp.setPhoneAllowance(phoneAllowance);
-                System.out.println("  Phone Allowance raw: '" + fields.get(15) + "' -> parsed: " + phoneAllowance);
             }
 
             // Clothing Allowance (column 16)
             if (fields.size() > 16) {
                 double clothingAllowance = parseCurrency(fields.get(16));
                 emp.setClothingAllowance(clothingAllowance);
-                System.out.println("  Clothing Allowance raw: '" + fields.get(16) + "' -> parsed: " + clothingAllowance);
             }
 
             // Generate email
@@ -196,15 +124,89 @@ public class EmployeeDAO extends BaseDAO<Employee> {
             return emp;
 
         } catch (Exception e) {
-            System.err.println("Error parsing employee: " + e.getMessage());
-            e.printStackTrace();
+            LOGGER.warning("Error parsing employee: " + e.getMessage());
             return null;
         }
     }
 
+    @Override
+    public String toCSV(Employee emp) {
+        List<String> fields = new ArrayList<>();
+
+        // Column 0: Employee #
+        fields.add(emp.getEmployeeId());
+
+        // Column 1: Last Name
+        fields.add(emp.getLastName());
+
+        // Column 2: First Name
+        fields.add(emp.getFirstName());
+
+        // Column 3: Birthday
+        fields.add(emp.getBirthDate() != null ? emp.getBirthDate().format(DATE_FORMATTER) : "");
+
+        // Column 4: Address (with quotes)
+        fields.add("\"" + (emp.getAddress() != null ? emp.getAddress() : "") + "\"");
+
+        // Column 5: Phone Number
+        fields.add(emp.getPhoneNumber() != null ? emp.getPhoneNumber() : "");
+
+        // Column 6: SSS #
+        GovernmentIds gov = emp.getGovernmentIds();
+        fields.add(gov != null && gov.getSssNumber() != null ? gov.getSssNumber() : "");
+
+        // Column 7: Philhealth #
+        fields.add(gov != null && gov.getPhilHealthNumber() != null ? gov.getPhilHealthNumber() : "");
+
+        // Column 8: TIN #
+        fields.add(gov != null && gov.getTinNumber() != null ? gov.getTinNumber() : "");
+
+        // Column 9: Pag-ibig #
+        fields.add(gov != null && gov.getPagIbigNumber() != null ? gov.getPagIbigNumber() : "");
+
+        // Column 10: Status
+        fields.add(emp.getStatus() != null ? emp.getStatus().toString() : "REGULAR");
+
+        // Column 11: Position
+        fields.add(emp.getPosition() != null ? emp.getPosition() : "");
+
+        // Column 12: Immediate Supervisor
+        fields.add(emp.getImmediateSupervisor() != null ? emp.getImmediateSupervisor() : "");
+
+        // Column 13: Basic Salary (with quotes and commas)
+        fields.add("\"" + String.format("%,.0f", emp.getBasicSalary()) + "\"");
+
+        // Column 14: Rice Subsidy (with quotes and commas)
+        fields.add("\"" + String.format("%,.0f", emp.getRiceSubsidy()) + "\"");
+
+        // Column 15: Phone Allowance (with quotes and commas)
+        fields.add("\"" + String.format("%,.0f", emp.getPhoneAllowance()) + "\"");
+
+        // Column 16: Clothing Allowance (with quotes and commas)
+        fields.add("\"" + String.format("%,.0f", emp.getClothingAllowance()) + "\"");
+
+        // Column 17: Gross Semi-monthly Rate (calculated, with quotes and commas)
+        fields.add("\"" + String.format("%,.0f", emp.getBasicSalary() / 2) + "\"");
+
+        // Column 18: Hourly Rate (calculated)
+        fields.add(String.format("%.2f", emp.getBasicSalary() / 168));
+
+        // Return as a single line without any newline characters
+        return String.join(",", fields);
+    }
+
+    @Override
+    protected String[] getHeaders() {
+        return HEADERS;
+    }
+
+    @Override
+    protected String getId(Employee item) {
+        return item.getEmployeeId();
+    }
+
     /**
      * Properly parse a CSV line handling quoted fields that may contain commas
-     * This is the key fix for your CSV with quoted salary values
      */
     private List<String> parseCSVLineProperly(String line) {
         List<String> fields = new ArrayList<>();
@@ -215,14 +217,11 @@ public class EmployeeDAO extends BaseDAO<Employee> {
             char c = line.charAt(i);
 
             if (c == '"') {
-                // Toggle quote state
                 inQuotes = !inQuotes;
             } else if (c == ',' && !inQuotes) {
-                // End of field
                 fields.add(currentField.toString());
                 currentField = new StringBuilder();
             } else {
-                // Add character to current field
                 currentField.append(c);
             }
         }
@@ -235,7 +234,6 @@ public class EmployeeDAO extends BaseDAO<Employee> {
 
     /**
      * Parse currency value that may contain quotes and commas
-     * Handles formats like: "90,000" -> 90000.0
      */
     private double parseCurrency(String value) {
         if (value == null || value.trim().isEmpty()) {
@@ -259,7 +257,7 @@ public class EmployeeDAO extends BaseDAO<Employee> {
             return Double.parseDouble(cleanValue);
 
         } catch (NumberFormatException e) {
-            System.err.println("Could not parse currency value: '" + value + "'");
+            LOGGER.warning("Could not parse currency value: '" + value + "'");
             return 0.0;
         }
     }
@@ -304,105 +302,45 @@ public class EmployeeDAO extends BaseDAO<Employee> {
         return cleanFirst + "." + cleanLast + "@motorph.com";
     }
 
-    // ========== BaseDAO IMPLEMENTATION ==========
-
-    @Override
-    public Employee fromCSV(String csvLine) {
-        return parseEmployee(csvLine);
-    }
-
-    @Override
-    public String toCSV(Employee emp) {
-        List<String> fields = new ArrayList<>();
-
-        fields.add(emp.getEmployeeId());
-        fields.add(emp.getLastName());
-        fields.add(emp.getFirstName());
-        fields.add(emp.getBirthDate() != null ? emp.getBirthDate().format(DATE_FORMATTER) : "");
-        fields.add("\"" + (emp.getAddress() != null ? emp.getAddress() : "") + "\"");
-        fields.add(emp.getPhoneNumber() != null ? emp.getPhoneNumber() : "");
-
-        GovernmentIds gov = emp.getGovernmentIds();
-        fields.add(gov != null && gov.getSssNumber() != null ? gov.getSssNumber() : "");
-        fields.add(gov != null && gov.getPhilHealthNumber() != null ? gov.getPhilHealthNumber() : "");
-        fields.add(gov != null && gov.getTinNumber() != null ? gov.getTinNumber() : "");
-        fields.add(gov != null && gov.getPagIbigNumber() != null ? gov.getPagIbigNumber() : "");
-
-        // Status
-        if (emp.getStatus() != null) {
-            fields.add(emp.getStatus().toString());
-        } else {
-            fields.add("REGULAR");
-        }
-
-        fields.add(emp.getPosition() != null ? emp.getPosition() : "");
-        fields.add(emp.getImmediateSupervisor() != null ? emp.getImmediateSupervisor() : "");
-
-        // Format with commas for thousands and wrap in quotes to preserve commas
-        fields.add("\"" + String.format("%,.0f", emp.getBasicSalary()) + "\"");
-        fields.add("\"" + String.format("%,.0f", emp.getRiceSubsidy()) + "\"");
-        fields.add("\"" + String.format("%,.0f", emp.getPhoneAllowance()) + "\"");
-        fields.add("\"" + String.format("%,.0f", emp.getClothingAllowance()) + "\"");
-
-        // Calculated fields
-        fields.add("\"" + String.format("%,.0f", emp.getBasicSalary() / 2) + "\"");
-        fields.add(String.format("%.2f", emp.getBasicSalary() / 168));
-
-        return String.join(",", fields);
-    }
-
-    @Override
-    protected String[] getHeaders() {
-        return HEADERS;
-    }
-
-    @Override
-    protected String getId(Employee item) {
-        return item.getEmployeeId();
-    }
-
     // ========== BUSINESS METHODS ==========
 
-    @Override
-    public List<Employee> readAll() {
-        return new ArrayList<>(employees);
-    }
-
     public Employee findByEmployeeId(String employeeId) {
-        return employees.stream()
-                .filter(e -> e.getEmployeeId().equals(employeeId))
-                .findFirst()
-                .orElse(null);
+        return findById(employeeId);
     }
 
     public List<Employee> getAllEmployees() {
-        return new ArrayList<>(employees);
+        return readAll();
+    }
+
+    @Override
+    public boolean add(Employee employee) {
+        return super.add(employee);
     }
 
     public boolean addEmployee(Employee emp) {
-        if (employees.stream().anyMatch(e -> e.getEmployeeId().equals(emp.getEmployeeId()))) {
-            return false;
-        }
-        employees.add(emp);
-        return true;
+        return add(emp);
+    }
+
+    @Override
+    public boolean update(Employee employee) {
+        return super.update(employee);
     }
 
     public boolean updateEmployee(Employee emp) {
-        for (int i = 0; i < employees.size(); i++) {
-            if (employees.get(i).getEmployeeId().equals(emp.getEmployeeId())) {
-                employees.set(i, emp);
-                return true;
-            }
-        }
-        return false;
+        return update(emp);
+    }
+
+    @Override
+    public boolean delete(String id) {
+        return super.delete(id);
     }
 
     public boolean deleteEmployee(String employeeId) {
-        return employees.removeIf(e -> e.getEmployeeId().equals(employeeId));
+        return delete(employeeId);
     }
 
     public String getNextEmployeeId() {
-        int maxId = employees.stream()
+        int maxId = cache.stream()
                 .map(e -> {
                     try {
                         return Integer.parseInt(e.getEmployeeId());
@@ -417,16 +355,12 @@ public class EmployeeDAO extends BaseDAO<Employee> {
 
     public List<Employee> searchEmployees(String keyword) {
         String lowerKeyword = keyword.toLowerCase();
-        return employees.stream()
+        return cache.stream()
                 .filter(e ->
                         e.getEmployeeId().contains(keyword) ||
                                 e.getFirstName().toLowerCase().contains(lowerKeyword) ||
                                 e.getLastName().toLowerCase().contains(lowerKeyword) ||
                                 (e.getPosition() != null && e.getPosition().toLowerCase().contains(lowerKeyword)))
                 .collect(Collectors.toList());
-    }
-
-    public void refreshData() {
-        loadData();
     }
 }
