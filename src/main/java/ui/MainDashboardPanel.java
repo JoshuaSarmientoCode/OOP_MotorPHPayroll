@@ -233,7 +233,7 @@ public class MainDashboardPanel extends JPanel {
         panel.add(createWelcomeHeader());
         panel.add(Box.createRigidArea(new Dimension(0, 25)));
         
-        // Attendance control card
+        // Attendance card
         panel.add(createAttendanceCard());
         panel.add(Box.createRigidArea(new Dimension(0, 25)));
         
@@ -247,11 +247,13 @@ public class MainDashboardPanel extends JPanel {
         return panel;
     }
     
+    // -- Welcome Header --
     private JPanel createWelcomeHeader() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
+        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
-        JLabel welcomeLabel = new JLabel("Welcome, " + currentEmployee.getFirstName() + "!");
+        JLabel welcomeLabel = new JLabel("Welcome, " + currentEmployee.getFirstName() + " " + currentEmployee.getLastName() + "!");
         welcomeLabel.setFont(new Font("SansSerif", Font.BOLD, 32));
         welcomeLabel.setForeground(UITheme.TEXT_PRIMARY);
         panel.add(welcomeLabel, BorderLayout.WEST);
@@ -259,6 +261,7 @@ public class MainDashboardPanel extends JPanel {
         return panel;
     }
     
+    // -- Attendance Card --
     private JPanel createAttendanceCard() {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
@@ -270,7 +273,7 @@ public class MainDashboardPanel extends JPanel {
         card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 140));
         
         // Title
-        JLabel titleLabel = UITheme.createSectionHeader("ATTENDANCE CONTROL");
+        JLabel titleLabel = UITheme.createSectionHeader("ATTENDANCE");
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(titleLabel);
         card.add(Box.createRigidArea(new Dimension(0, 12)));
@@ -334,7 +337,7 @@ public class MainDashboardPanel extends JPanel {
         card.add(statusPanel);
         card.add(Box.createRigidArea(new Dimension(0, 15)));
         
-        // Buttons
+        // Time In & Time Out Buttons
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         buttonPanel.setBackground(UITheme.CARD_BG);
         buttonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -359,7 +362,7 @@ public class MainDashboardPanel extends JPanel {
     }
     
     private JPanel createMetricsRow() {
-        // Changed from GridLayout(1, 4) to GridLayout(1, 3) since we removed one card
+        
         JPanel panel = new JPanel(new GridLayout(1, 3, 15, 0));
         panel.setOpaque(false);
         panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
@@ -372,11 +375,6 @@ public class MainDashboardPanel extends JPanel {
             getAttendanceMetric()
         ));
         
-        panel.add(UITheme.createMetricCard(
-            "LEAVE BALANCE",
-            getLeaveBalance() + " DAYS"
-        ));
-        
         double totalHours = 0;
         try {
             totalHours = attendanceService.getTotalHoursWorked(
@@ -385,7 +383,7 @@ public class MainDashboardPanel extends JPanel {
                 currentMonth.atEndOfMonth()
             );
         } catch (Exception e) {
-            // Ignore
+
         }
         
         panel.add(UITheme.createMetricCard(
