@@ -267,9 +267,10 @@ public class MainDashboardPanel extends JPanel {
     private JPanel createWelcomeHeader() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
+        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         String firstName = currentEmployee != null ? currentEmployee.getFirstName() : "User";
-        JLabel welcomeLabel = new JLabel("Welcome, " + firstName + "!");
+        JLabel welcomeLabel = new JLabel("Welcome, " + currentEmployee.getFirstName() + " " + currentEmployee.getLastName() + "!");;
         welcomeLabel.setFont(new Font("SansSerif", Font.BOLD, 32));
         welcomeLabel.setForeground(UITheme.TEXT_PRIMARY);
         panel.add(welcomeLabel, BorderLayout.WEST);
@@ -625,4 +626,5 @@ public class MainDashboardPanel extends JPanel {
         if (text == null || text.length() <= maxLength) return text;
         return text.substring(0, maxLength) + "...";
     }
+
 }
