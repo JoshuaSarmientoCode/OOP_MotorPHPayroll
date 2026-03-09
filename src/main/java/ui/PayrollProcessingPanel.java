@@ -210,6 +210,10 @@ public class PayrollProcessingPanel extends JPanel {
             periodCombo.addItem(month);
             month = month.minusMonths(1);
         }
+
+        // Set current month as default
+        periodCombo.setSelectedItem(current);
+
         panel.add(periodCombo);
 
         refreshBtn = createDashboardStyleButton("REFRESH");
@@ -256,6 +260,7 @@ public class PayrollProcessingPanel extends JPanel {
         employeeTable.setGridColor(UITheme.BORDER_COLOR);
         employeeTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 
+        // Status column renderer
         employeeTable.getColumnModel().getColumn(5).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value,
@@ -264,8 +269,11 @@ public class PayrollProcessingPanel extends JPanel {
                 String status = value != null ? value.toString() : "";
                 setHorizontalAlignment(SwingConstants.CENTER);
                 setFont(getFont().deriveFont(Font.BOLD));
-                if ("PROCESSED".equals(status)) setForeground(UITheme.ACCENT_GREEN);
-                else setForeground(UITheme.ACCENT_ORANGE);
+                if ("PROCESSED".equals(status)) {
+                    setForeground(UITheme.ACCENT_GREEN);
+                } else {
+                    setForeground(UITheme.ACCENT_ORANGE);
+                }
                 return c;
             }
         });
@@ -322,8 +330,11 @@ public class PayrollProcessingPanel extends JPanel {
                     for (Employee emp : allEmployees) {
                         boolean isProcessed = payrollService.hasPayroll(emp.getEmployeeId(), selectedPeriod);
                         processedStatus.put(emp.getEmployeeId(), isProcessed);
+                        System.out.println("Employee " + emp.getEmployeeId() + " processed: " + isProcessed);
                     }
-                } catch (Exception e) { e.printStackTrace(); }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
                 return null;
             }
             @Override
@@ -338,88 +349,280 @@ public class PayrollProcessingPanel extends JPanel {
 
     private void updateTable() {
         if (tableModel == null || allEmployees == null) return;
-        tableModel.setRowCount(0);
-        for (Employee emp : allEmployees) {
-            boolean isProcessed = processedStatus.getOrDefault(emp.getEmployeeId(), false);
-            tableModel.addRow(new Object[]{
-                    emp.getEmployeeId(),
-                    emp.getFullName(),
-                    emp.getPosition() != null ? emp.getPosition() : "—",
-                    emp.getDepartment() != null ? emp.getDepartment() : "—",
-                    UITheme.formatCurrency(emp.getBasicSalary()),
-                    isProcessed ? "PROCESSED" : "PENDING"
-            });
-        }
+
+        SwingUtilities.invokeLater(() -> {
+            tableModel.setRowCount(0);
+            for (Employee emp : allEmployees) {
+                boolean isProcessed = processedStatus.getOrDefault(emp.getEmployeeId(), false);
+                tableModel.addRow(new Object[]{
+                        emp.getEmployeeId(),
+                        emp.getFullName(),
+                        emp.getPosition() != null ? emp.getPosition() : "—",
+                        emp.getDepartment() != null ? emp.getDepartment() : "—",
+                        UITheme.formatCurrency(emp.getBasicSalary()),
+                        isProcessed ? "PROCESSED" : "PENDING"
+                });
+            }
+        });
     }
 
     private void updateStats(YearMonth period) {
         if (period == null || totalEmployeesLabel == null) return;
         try {
             Map<String, Object> status = payrollService.getPayrollStatus(period);
-            totalEmployeesLabel.setText(String.valueOf(status.get("totalEmployees")));
-            processedLabel.setText(String.valueOf(status.get("processedCount")));
-            pendingLabel.setText(String.valueOf(status.get("pendingCount")));
-            totalGrossLabel.setText(UITheme.formatCurrency((double) status.get("totalGrossSalary")));
-            totalNetLabel.setText(UITheme.formatCurrency((double) status.get("totalNetSalary")));
-            summaryLabel.setText(String.format("Processed: %s/%s employees", status.get("processedCount"), status.get("totalEmployees")));
-        } catch (Exception e) { e.printStackTrace(); }
+
+            SwingUtilities.invokeLater(() -> {
+                totalEmployeesLabel.setText(String.valueOf(status.get("totalEmployees")));
+                processedLabel.setText(String.valueOf(status.get("processedCount")));
+                pendingLabel.setText(String.valueOf(status.get("pendingCount")));
+                totalGrossLabel.setText(UITheme.formatCurrency((double) status.get("totalGrossSalary")));
+                totalNetLabel.setText(UITheme.formatCurrency((double) status.get("totalNetSalary")));
+                summaryLabel.setText(String.format("Processed: %s/%s employees",
+                        status.get("processedCount"), status.get("totalEmployees")));
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void processAllPayroll() {
         YearMonth period = (YearMonth) periodCombo.getSelectedItem();
         if (period == null) return;
 
-        if (controller.showConfirm("Process all pending payroll?", "CONFIRM")) {
+        int pendingCount = Integer.parseInt(pendingLabel.getText());
+        if (pendingCount == 0) {
+            controller.showInfo("All employees already processed for this period.");
+            return;
+        }
+
+        if (controller.showConfirm("Process all pending payroll for " + period + "?", "CONFIRM")) {
             setButtonsEnabled(false);
-            new SwingWorker<List<Payslip>, Void>() {
-                @Override protected List<Payslip> doInBackground() throws Exception { return payrollService.processPayroll(period); }
-                @Override protected void done() {
-                    controller.showInfo("Batch processing complete.");
-                    loadData();
-                    setButtonsEnabled(true);
+            statusLabel.setText("Processing all payroll...");
+
+            SwingWorker<List<Payslip>, Void> worker = new SwingWorker<>() {
+                @Override
+                protected List<Payslip> doInBackground() throws Exception {
+                    return payrollService.processPayroll(period);
                 }
-            }.execute();
+                @Override
+                protected void done() {
+                    try {
+                        List<Payslip> results = get();
+                        controller.showInfo("Successfully processed " + results.size() + " payroll records.");
+                        loadData();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        controller.showError("Error processing payroll: " + e.getMessage());
+                    } finally {
+                        setButtonsEnabled(true);
+                        statusLabel.setText("Ready");
+                    }
+                }
+            };
+            worker.execute();
         }
     }
 
     private void processSelectedPayroll() {
         int[] selectedRows = employeeTable.getSelectedRows();
-        if (selectedRows.length == 0) { controller.showWarning("SELECT EMPLOYEES"); return; }
+        if (selectedRows.length == 0) {
+            controller.showWarning("Please select at least one employee to process.");
+            return;
+        }
 
         YearMonth period = (YearMonth) periodCombo.getSelectedItem();
-        if (controller.showConfirm("Process selected?", "CONFIRM")) {
+        if (period == null) return;
+
+        // Check if any selected employees are already processed
+        List<String> toProcess = new ArrayList<>();
+        List<String> alreadyProcessed = new ArrayList<>();
+
+        for (int row : selectedRows) {
+            String empId = (String) tableModel.getValueAt(row, 0);
+            if (!processedStatus.getOrDefault(empId, false)) {
+                toProcess.add(empId);
+            } else {
+                alreadyProcessed.add(empId);
+            }
+        }
+
+        if (toProcess.isEmpty()) {
+            controller.showInfo("All selected employees are already processed.");
+            return;
+        }
+
+        String message = "Process payroll for " + toProcess.size() + " selected employee(s)?";
+        if (!alreadyProcessed.isEmpty()) {
+            message += "\n(" + alreadyProcessed.size() + " employee(s) already processed will be skipped)";
+        }
+
+        if (controller.showConfirm(message, "CONFIRM")) {
             setButtonsEnabled(false);
-            new SwingWorker<Void, Void>() {
-                @Override protected Void doInBackground() throws Exception {
-                    for (int row : selectedRows) {
-                        String id = (String) tableModel.getValueAt(row, 0);
-                        if (!processedStatus.getOrDefault(id, false)) payrollService.generatePayslip(id, period);
+            statusLabel.setText("Processing selected payroll...");
+
+            SwingWorker<Integer, Void> worker = new SwingWorker<>() {
+                @Override
+                protected Integer doInBackground() throws Exception {
+                    int successCount = 0;
+                    for (String empId : toProcess) {
+                        try {
+                            System.out.println("Processing payroll for employee: " + empId);
+
+                            // Generate payslip - this now saves to history
+                            Payslip payslip = payrollService.generatePayslip(empId, period);
+
+                            if (payslip != null) {
+                                successCount++;
+                                System.out.println("Successfully processed payroll for: " + empId);
+
+                                // Verify it was saved
+                                boolean hasPayroll = payrollService.hasPayroll(empId, period);
+                                System.out.println("Verification - hasPayroll: " + hasPayroll);
+
+                                // Update the processed status map
+                                processedStatus.put(empId, true);
+                            }
+                        } catch (Exception e) {
+                            System.err.println("Error processing employee " + empId + ": " + e.getMessage());
+                            e.printStackTrace();
+                        }
                     }
-                    return null;
+                    return successCount;
                 }
-                @Override protected void done() { loadData(); setButtonsEnabled(true); }
-            }.execute();
+                @Override
+                protected void done() {
+                    try {
+                        int successCount = get();
+                        controller.showInfo("Successfully processed " + successCount + " of " + toProcess.size() + " selected employees.");
+
+                        // Update the table immediately with the new status
+                        updateTable();
+
+                        // Also reload stats
+                        updateStats(period);
+
+                        // Force a complete reload of data from database to be sure
+                        loadData();
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        controller.showError("Error processing selected payroll: " + e.getMessage());
+                    } finally {
+                        setButtonsEnabled(true);
+                        statusLabel.setText("Ready");
+                    }
+                }
+            };
+            worker.execute();
         }
     }
 
     private void viewReport() {
         YearMonth period = (YearMonth) periodCombo.getSelectedItem();
+        if (period == null) return;
+
         try {
             Map<String, Object> status = payrollService.getPayrollStatus(period);
-            String report = "PAYROLL REPORT - " + period + "\n\n" +
-                    "Total Gross: " + UITheme.formatCurrency((double) status.get("totalGrossSalary")) + "\n" +
-                    "Total Net: " + UITheme.formatCurrency((double) status.get("totalNetSalary"));
 
-            JTextArea area = new JTextArea(report);
-            area.setFont(UITheme.MONO_FONT);
-            JOptionPane.showMessageDialog(this, new JScrollPane(area), "REPORT", JOptionPane.PLAIN_MESSAGE);
-        } catch (Exception e) { controller.showError(e.getMessage()); }
+            StringBuilder report = new StringBuilder();
+            report.append("=".repeat(60)).append("\n");
+            report.append(String.format("%40s\n", "PAYROLL REPORT"));
+            report.append("=".repeat(60)).append("\n\n");
+            report.append("Period: ").append(period.format(DateTimeFormatter.ofPattern("MMMM yyyy"))).append("\n");
+            report.append("Generated: ").append(LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM dd, yyyy"))).append("\n\n");
+            report.append("-".repeat(60)).append("\n\n");
+            report.append("Total Employees: ").append(status.get("totalEmployees")).append("\n");
+            report.append("Processed: ").append(status.get("processedCount")).append("\n");
+            report.append("Pending: ").append(status.get("pendingCount")).append("\n\n");
+            report.append("Total Gross Salary: ").append(UITheme.formatCurrency((double) status.get("totalGrossSalary"))).append("\n");
+            report.append("Total Deductions: ").append(UITheme.formatCurrency((double) status.get("totalDeductions"))).append("\n");
+            report.append("Total Net Salary: ").append(UITheme.formatCurrency((double) status.get("totalNetSalary"))).append("\n\n");
+            report.append("=".repeat(60));
+
+            JTextArea textArea = new JTextArea(report.toString());
+            textArea.setFont(UITheme.MONO_FONT);
+            textArea.setEditable(false);
+            textArea.setBackground(UITheme.CARD_BG);
+
+            JScrollPane scrollPane = new JScrollPane(textArea);
+            scrollPane.setPreferredSize(new Dimension(600, 400));
+
+            JOptionPane.showMessageDialog(this, scrollPane, "PAYROLL REPORT", JOptionPane.PLAIN_MESSAGE);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            controller.showError("Error generating report: " + e.getMessage());
+        }
     }
 
     private void exportData() {
-        JFileChooser fc = new JFileChooser();
-        if (fc.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-            controller.showInfo("Exported successfully.");
+        YearMonth period = (YearMonth) periodCombo.getSelectedItem();
+        if (period == null) return;
+
+        String filename = String.format("Payroll_%s.csv", period.toString().replace("-", "_"));
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setSelectedFile(new java.io.File(filename));
+
+        if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            try (java.io.PrintWriter writer = new java.io.PrintWriter(fileChooser.getSelectedFile())) {
+                // Write header
+                writer.println("Employee ID,Employee Name,Position,Department,Basic Salary,Gross Salary,SSS,PhilHealth,Pag-IBIG,Tax,Total Deductions,Net Salary,Status");
+
+                // Write data
+                for (int i = 0; i < tableModel.getRowCount(); i++) {
+                    String empId = (String) tableModel.getValueAt(i, 0);
+                    boolean isProcessed = processedStatus.getOrDefault(empId, false);
+
+                    if (isProcessed) {
+                        // Get the payroll record for more details
+                        String payrollId = empId + "_" + period.toString().replace("-", "_");
+                        Payslip payslip = payrollService.getPayslip(payrollId);
+
+                        if (payslip != null) {
+                            writer.println(
+                                    empId + "," +
+                                            tableModel.getValueAt(i, 1) + "," +
+                                            tableModel.getValueAt(i, 2) + "," +
+                                            tableModel.getValueAt(i, 3) + "," +
+                                            tableModel.getValueAt(i, 4).toString().replace("₱ ", "").replace(",", "") + "," +
+                                            String.format("%.2f", payslip.getGrossSalary()).replace(",", "") + "," +
+                                            String.format("%.2f", payslip.getSss()).replace(",", "") + "," +
+                                            String.format("%.2f", payslip.getPhilhealth()).replace(",", "") + "," +
+                                            String.format("%.2f", payslip.getPagibig()).replace(",", "") + "," +
+                                            String.format("%.2f", payslip.getTax()).replace(",", "") + "," +
+                                            String.format("%.2f", payslip.getTotalDeductions()).replace(",", "") + "," +
+                                            String.format("%.2f", payslip.getNetPay()).replace(",", "") + "," +
+                                            "PROCESSED"
+                            );
+                        } else {
+                            writer.println(
+                                    empId + "," +
+                                            tableModel.getValueAt(i, 1) + "," +
+                                            tableModel.getValueAt(i, 2) + "," +
+                                            tableModel.getValueAt(i, 3) + "," +
+                                            tableModel.getValueAt(i, 4).toString().replace("₱ ", "").replace(",", "") + "," +
+                                            ",,,,,,,PROCESSED"
+                            );
+                        }
+                    } else {
+                        writer.println(
+                                empId + "," +
+                                        tableModel.getValueAt(i, 1) + "," +
+                                        tableModel.getValueAt(i, 2) + "," +
+                                        tableModel.getValueAt(i, 3) + "," +
+                                        tableModel.getValueAt(i, 4).toString().replace("₱ ", "").replace(",", "") + "," +
+                                        ",,,,,,,PENDING"
+                        );
+                    }
+                }
+
+                controller.showInfo("Payroll data exported successfully to " + filename);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                controller.showError("Error exporting data: " + e.getMessage());
+            }
         }
     }
 

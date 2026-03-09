@@ -38,9 +38,11 @@ public class PayrollService {
     }
 
     /**
-     * Generate a payslip for an employee for a specific period
+     * Generate a payslip for an employee for a specific period and save to history
      */
     public Payslip generatePayslip(String employeeId, YearMonth period) {
+        System.out.println("Generating payslip for employee: " + employeeId + " period: " + period);
+
         Employee emp = employeeDAO.findByEmployeeId(employeeId);
         if (emp == null) {
             throw new IllegalArgumentException("Employee not found: " + employeeId);
@@ -101,7 +103,7 @@ public class PayrollService {
 
         // Create payslip
         Payslip payslip = new Payslip();
-        payslip.setPayslipId(generatePayslipId());
+        payslip.setPayslipId(generatePayslipId(employeeId, period));
         payslip.setEmployeeId(employeeId);
         payslip.setEmployeeName(emp.getFullName());
         payslip.setPeriod(period);
@@ -129,7 +131,30 @@ public class PayrollService {
         payslip.setAbsentDays(STANDARD_WORKING_DAYS_PER_MONTH - daysPresent);
         payslip.setOvertimeHours(totalOvertime);
 
+        // Save to payroll history
+        System.out.println("Saving payslip to history: " + payslip.getPayslipId());
+        boolean saved = savePayslipToHistory(payslip);
+        if (saved) {
+            System.out.println("Successfully saved payslip to history");
+        } else {
+            System.out.println("Failed to save payslip to history");
+        }
+
         return payslip;
+    }
+
+    /**
+     * Save payslip to history (creates a Payroll record)
+     */
+    private boolean savePayslipToHistory(Payslip payslip) {
+        Payroll payroll = convertToPayroll(payslip);
+        boolean success = payrollDAO.addPayroll(payroll);
+        if (success) {
+            System.out.println("Payroll saved to history: " + payslip.getPayslipId());
+        } else {
+            System.err.println("Failed to save payroll to history: " + payslip.getPayslipId());
+        }
+        return success;
     }
 
     /**
@@ -139,6 +164,9 @@ public class PayrollService {
         List<Employee> allEmployees = employeeDAO.getAllEmployees();
         List<Payslip> payslips = new ArrayList<>();
         List<String> errors = new ArrayList<>();
+
+        System.out.println("Processing payroll for period: " + period);
+        System.out.println("Total employees: " + allEmployees.size());
 
         for (Employee emp : allEmployees) {
             try {
@@ -150,32 +178,18 @@ public class PayrollService {
 
                 Payslip payslip = generatePayslip(emp.getEmployeeId(), period);
                 payslips.add(payslip);
-
-                // Save to payroll history
-                savePayslipToHistory(payslip);
+                System.out.println("Processed payroll for: " + emp.getEmployeeId());
 
             } catch (Exception e) {
                 String error = "Error processing payroll for " + emp.getEmployeeId() + ": " + e.getMessage();
                 System.err.println(error);
                 errors.add(error);
+                e.printStackTrace();
             }
         }
 
         System.out.println("Payroll processed: " + payslips.size() + " successful, " + errors.size() + " errors");
         return payslips;
-    }
-
-    /**
-     * Save payslip to history (creates a Payroll record)
-     */
-    private void savePayslipToHistory(Payslip payslip) {
-        Payroll payroll = convertToPayroll(payslip);
-        boolean success = payrollDAO.addPayroll(payroll);
-        if (success) {
-            System.out.println("Payroll saved to history: " + payslip.getPayslipId());
-        } else {
-            System.err.println("Failed to save payroll to history: " + payslip.getPayslipId());
-        }
     }
 
     /**
@@ -239,7 +253,9 @@ public class PayrollService {
      */
     public boolean hasPayroll(String employeeId, YearMonth period) {
         Payroll payroll = payrollDAO.findByEmployeeAndPeriod(employeeId, period);
-        return payroll != null;
+        boolean exists = payroll != null;
+        System.out.println("Checking if payroll exists for " + employeeId + " period " + period + ": " + exists);
+        return exists;
     }
 
     /**
@@ -260,8 +276,8 @@ public class PayrollService {
 
     // ========== CONVERSION METHODS ==========
 
-    private String generatePayslipId() {
-        return "PS" + System.currentTimeMillis() + String.format("%04d", new Random().nextInt(10000));
+    private String generatePayslipId(String employeeId, YearMonth period) {
+        return employeeId + "_" + period.toString().replace("-", "_");
     }
 
     private Payslip convertToPayslip(Payroll p) {
