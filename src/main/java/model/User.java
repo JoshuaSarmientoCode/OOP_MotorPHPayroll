@@ -70,7 +70,8 @@ public class User {
 
             // Check for HR positions
             if (pos.contains("hr") || pos.contains("human resources") ||
-                    pos.contains("recruitment") || pos.contains("personnel")) {
+                    pos.contains("recruitment") || pos.contains("personnel") ||
+                    pos.contains("hiring") || pos.contains("talent")) {
                 System.out.println("-> HR position detected, returning HR");
                 return Role.HR;
             }
@@ -188,23 +189,31 @@ public class User {
             case "VIEW_ALL_PAYROLL":
             case "VIEW_AUDIT_LOGS":
             case "SYSTEM_CONFIGURATION":
+                // HR should have access to EMPLOYEE_MANAGEMENT
+                if ("EMPLOYEE_MANAGEMENT".equals(feature)) {
+                    return currentRole == Role.ADMIN || currentRole == Role.HR;
+                }
                 return currentRole == Role.ADMIN;
 
-            // HR access
+            // HR access - expanded for HR permissions
             case "VIEW_EMPLOYEES":
             case "EDIT_EMPLOYEES":
             case "APPROVE_LEAVE":
+            case "EMPLOYEE_RECORDS":
+            case "VIEW_EMPLOYEE_DETAILS":
                 return currentRole == Role.ADMIN || currentRole == Role.HR;
 
             // Finance access
             case "PROCESS_PAYROLL":
             case "VIEW_PAYROLL":
             case "VIEW_REPORTS":
+            case "FINANCIAL_DATA":
                 return currentRole == Role.ADMIN || currentRole == Role.FINANCE;
 
             // IT access
             case "MANAGE_SYSTEM":
             case "VIEW_LOGS":
+            case "USER_ACCOUNTS":
                 return currentRole == Role.ADMIN || currentRole == Role.IT;
 
             // Employee access (everyone)
