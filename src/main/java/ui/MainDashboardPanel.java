@@ -19,10 +19,11 @@ public class MainDashboardPanel extends JPanel {
     private final EmployeeService employeeService;
     private final PayrollService payrollService;
     private final AttendanceService attendanceService;
+    private final TicketService ticketService;
+    private final SystemLogService systemLogService;
     private final User currentUser;
     private final Employee currentEmployee;
 
-    // UI Components
     private JPanel contentArea;
     private CardLayout contentLayout;
     private JLabel clockLabel;
@@ -31,65 +32,39 @@ public class MainDashboardPanel extends JPanel {
     private JLabel attendanceStatusLabel;
     private JButton timeInBtn;
     private JButton timeOutBtn;
+    private JButton logoutBtn;
 
     public MainDashboardPanel(MainController controller, UserService userService,
                               EmployeeService employeeService, PayrollService payrollService,
-                              AttendanceService attendanceService, User currentUser,
+                              AttendanceService attendanceService, TicketService ticketService,
+                              SystemLogService systemLogService, User currentUser,
                               Employee currentEmployee) {
         this.controller = controller;
         this.userService = userService;
         this.employeeService = employeeService;
         this.payrollService = payrollService;
         this.attendanceService = attendanceService;
+        this.ticketService = ticketService;
+        this.systemLogService = systemLogService;
         this.currentUser = currentUser;
         this.currentEmployee = currentEmployee;
 
-        // Debug output
-        System.out.println("=== MAIN DASHBOARD INITIALIZATION ===");
-        System.out.println("Current User: " + (currentUser != null ? currentUser.getUsername() : "null"));
-        System.out.println("Current Employee: " + (currentEmployee != null ? currentEmployee.getFullName() : "null"));
-        System.out.println("User has employee: " + (currentUser != null && currentUser.getEmployee() != null));
-        if (currentUser != null) {
-            System.out.println("User employee ID: " + currentUser.getEmployeeId());
-        }
-        if (currentEmployee != null) {
-            System.out.println("Employee ID: " + currentEmployee.getEmployeeId());
-        }
-
         initializePanel();
         startClock();
-
-        // Initial button state update
-        SwingUtilities.invokeLater(() -> {
-            updateAttendanceButtonStates();
-        });
+        updateAttendanceButtonStates();
     }
 
     private void initializePanel() {
         setLayout(new BorderLayout());
         setBackground(UITheme.BG_PRIMARY);
 
-        // Left sidebar with navigation
-        JPanel sidebar = createSidebar();
-        add(sidebar, BorderLayout.WEST);
-
-        // Main content area
-        contentLayout = new CardLayout();
-        contentArea = new JPanel(contentLayout);
-        contentArea.setBackground(UITheme.BG_PRIMARY);
-        contentArea.add(createDashboardContent(), "DASHBOARD");
-
-        add(contentArea, BorderLayout.CENTER);
-    }
-
-    private JPanel createSidebar() {
+        // SIDEBAR
         JPanel sidebar = new JPanel();
         sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
         sidebar.setBackground(UITheme.CARD_BG);
         sidebar.setPreferredSize(new Dimension(280, getHeight()));
         sidebar.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, UITheme.BORDER_COLOR));
 
-        // Brand
         JLabel brandLabel = new JLabel("MOTORPH");
         brandLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
         brandLabel.setForeground(UITheme.ACCENT_DARK);
@@ -97,114 +72,58 @@ public class MainDashboardPanel extends JPanel {
         brandLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         sidebar.add(brandLabel);
 
-        // User info
-        JPanel userInfo = createUserInfoPanel();
-        userInfo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        sidebar.add(userInfo);
-        sidebar.add(Box.createRigidArea(new Dimension(0, 20)));
+        sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
 
-        // Navigation sections
-        addNavigationSection(sidebar, "GENERAL", new String[][]{
-                {"DASHBOARD", "showDashboard"},
-                {"ATTENDANCE", "showAttendance"},
-                {"PAYSLIP", "showPayslip"},
-                {"LEAVE REQUEST", "showLeaveRequest"}
-        });
+        // Navigation Logic (Original Role-Based)
+        addSectionLabel(sidebar, "GENERAL");
+        sidebar.add(createNavBtn("DASHBOARD", e -> showDashboard()));
+        sidebar.add(createNavBtn("ATTENDANCE", e -> controller.showAttendance()));
+        sidebar.add(createNavBtn("PAYSLIP", e -> controller.showPayslip()));
+        sidebar.add(createNavBtn("LEAVE REQUEST", e -> controller.showLeaveRequest()));
+        sidebar.add(createNavBtn("SUBMIT TICKET", e -> controller.showSubmitTicket()));
 
-        // Role-specific sections
         if (currentEmployee instanceof AdminEmployee || currentEmployee instanceof HREmployee) {
             sidebar.add(Box.createRigidArea(new Dimension(0, 15)));
-            addNavigationSection(sidebar, "ADMINISTRATION", new String[][]{
-                    {"EMPLOYEE MANAGEMENT", "showEmployeeManagement"},
-                    {"LEAVE APPROVALS", "showLeaveApprovals"},
-                    {"PAYROLL PROCESSING", "showPayrollProcessing"}
-            });
+            addSectionLabel(sidebar, "ADMINISTRATION");
+            sidebar.add(createNavBtn("EMPLOYEE MANAGEMENT", e -> controller.showEmployeeManagement()));
+            sidebar.add(createNavBtn("LEAVE APPROVALS", e -> controller.showLeaveApprovals()));
+            sidebar.add(createNavBtn("PAYROLL PROCESSING", e -> controller.showPayrollProcessing()));
         }
 
-        if (currentEmployee instanceof FinanceEmployee) {
+        if (currentEmployee instanceof ITEmployee || currentEmployee instanceof AdminEmployee) {
             sidebar.add(Box.createRigidArea(new Dimension(0, 15)));
-            addNavigationSection(sidebar, "FINANCE", new String[][]{
-                    {"PAYROLL PROCESSING", "showPayrollProcessing"}
-            });
-        }
-
-        if (currentEmployee instanceof ITEmployee) {
-            sidebar.add(Box.createRigidArea(new Dimension(0, 15)));
-            addNavigationSection(sidebar, "IT TOOLS", new String[][]{
-                    {"USER ACCOUNTS", "showUserAccounts"},
-                    {"SYSTEM LOGS", "showSystemLogs"}
-            });
+            addSectionLabel(sidebar, "IT TOOLS");
+            sidebar.add(createNavBtn("TICKET MANAGEMENT", e -> controller.showTicketManagement()));
+            sidebar.add(createNavBtn("SYSTEM LOGS", e -> controller.showSystemLogs()));
         }
 
         sidebar.add(Box.createVerticalGlue());
+        sidebar.add(createFooter());
+        add(sidebar, BorderLayout.WEST);
 
-        // Footer with clock and logout
-        JPanel footer = createFooter();
-        footer.setAlignmentX(Component.LEFT_ALIGNMENT);
-        sidebar.add(footer);
-
-        return sidebar;
+        // MAIN CONTENT
+        contentLayout = new CardLayout();
+        contentArea = new JPanel(contentLayout);
+        contentArea.setBackground(UITheme.BG_PRIMARY);
+        contentArea.add(createDashboardContent(), "DASHBOARD");
+        add(contentArea, BorderLayout.CENTER);
     }
 
-    private JPanel createUserInfoPanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBackground(UITheme.CARD_BG);
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 30, 10, 30));
-
-        String roleName = currentEmployee != null ? currentEmployee.getRoleName() : "EMPLOYEE";
-        String employeeId = currentUser != null ? currentUser.getEmployeeId() : "N/A";
-
-        JLabel nameLabel = new JLabel(currentEmployee != null ? currentEmployee.getFullName() : "Unknown");
-        nameLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
-        nameLabel.setForeground(UITheme.TEXT_PRIMARY);
-        nameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(nameLabel);
-
-        JLabel roleLabel = new JLabel(roleName + " | ID: " + employeeId);
-        roleLabel.setFont(UITheme.SMALL_FONT);
-        roleLabel.setForeground(UITheme.TEXT_SECONDARY);
-        roleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(roleLabel);
-
-        return panel;
+    private void addSectionLabel(JPanel panel, String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(UITheme.BOLD_SMALL_FONT);
+        label.setForeground(UITheme.TEXT_SECONDARY);
+        label.setBorder(BorderFactory.createEmptyBorder(0, 30, 8, 0));
+        label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(label);
     }
 
-    private void addNavigationSection(JPanel sidebar, String sectionTitle, String[][] items) {
-        JLabel sectionLabel = new JLabel(sectionTitle);
-        sectionLabel.setFont(UITheme.BOLD_SMALL_FONT);
-        sectionLabel.setForeground(UITheme.TEXT_SECONDARY);
-        sectionLabel.setBorder(BorderFactory.createEmptyBorder(0, 30, 5, 0));
-        sectionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        sidebar.add(sectionLabel);
-
-        for (String[] item : items) {
-            JButton btn = createNavButton(item[0], item[1]);
-            sidebar.add(btn);
-            sidebar.add(Box.createRigidArea(new Dimension(0, 5)));
-        }
-    }
-
-    private JButton createNavButton(String text, String action) {
+    private JButton createNavBtn(String text, ActionListener al) {
         JButton btn = UITheme.createDashboardButton(text);
-        btn.setHorizontalAlignment(SwingConstants.LEFT);
-        btn.setMaximumSize(new Dimension(250, 45));
         btn.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        btn.addActionListener(e -> {
-            switch (action) {
-                case "showDashboard": showDashboard(); break;
-                case "showAttendance": controller.showAttendance(); break;
-                case "showPayslip": controller.showPayslip(); break;
-                case "showLeaveRequest": controller.showLeaveRequest(); break;
-                case "showEmployeeManagement": controller.showEmployeeManagement(); break;
-                case "showLeaveApprovals": controller.showLeaveApprovals(); break;
-                case "showPayrollProcessing": controller.showPayrollProcessing(); break;
-                case "showUserAccounts": showUserAccounts(); break;
-                case "showSystemLogs": showSystemLogs(); break;
-            }
-        });
-
+        btn.setHorizontalAlignment(SwingConstants.LEFT);
+        btn.setMaximumSize(new Dimension(240, 40));
+        btn.addActionListener(al);
         return btn;
     }
 
@@ -213,30 +132,26 @@ public class MainDashboardPanel extends JPanel {
         footer.setLayout(new BoxLayout(footer, BoxLayout.Y_AXIS));
         footer.setBackground(UITheme.CARD_BG);
         footer.setBorder(BorderFactory.createEmptyBorder(20, 30, 30, 30));
-        footer.setMaximumSize(new Dimension(280, 150));
+        footer.setMaximumSize(new Dimension(280, 100));
 
-        dateLabel = new JLabel();
-        dateLabel.setFont(UITheme.BOLD_SMALL_FONT);
-        dateLabel.setForeground(UITheme.TEXT_SECONDARY);
-        dateLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        footer.add(dateLabel);
-
-        footer.add(Box.createRigidArea(new Dimension(0, 5)));
-
-        clockLabel = new JLabel();
-        clockLabel.setFont(new Font("Monospaced", Font.BOLD, 18));
-        clockLabel.setForeground(UITheme.TEXT_PRIMARY);
-        clockLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        footer.add(clockLabel);
-
-        footer.add(Box.createRigidArea(new Dimension(0, 20)));
-
-        JButton logoutBtn = UITheme.createPrimaryButton("SIGN OUT", UITheme.ACCENT_DARK);
-        logoutBtn.setMaximumSize(new Dimension(220, 45));
+        logoutBtn = new JButton("SIGN OUT");
+        logoutBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        logoutBtn.setForeground(Color.WHITE);
+        logoutBtn.setBackground(new Color(33, 33, 33));
+        logoutBtn.setFocusPainted(false);
+        logoutBtn.setBorderPainted(false);
+        logoutBtn.setOpaque(true);
+        logoutBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         logoutBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        logoutBtn.setMaximumSize(new Dimension(220, 45));
+
+        logoutBtn.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) { logoutBtn.setBackground(new Color(55, 55, 55)); }
+            public void mouseExited(MouseEvent e) { logoutBtn.setBackground(new Color(33, 33, 33)); }
+        });
+
         logoutBtn.addActionListener(e -> controller.handleLogout());
         footer.add(logoutBtn);
-
         return footer;
     }
 
@@ -244,37 +159,85 @@ public class MainDashboardPanel extends JPanel {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(UITheme.BG_PRIMARY);
-        panel.setBorder(UITheme.PANEL_PADDING);
+        panel.setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
 
-        // Welcome header
-        panel.add(createWelcomeHeader());
+        // User Info Header - Full Name, Employee Number, Role, Department (no "Welcome")
+        JPanel header = new JPanel();
+        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
+        header.setOpaque(false);
+        header.setAlignmentX(Component.CENTER_ALIGNMENT);
+        header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
+
+        String fullName = currentEmployee != null ? currentEmployee.getFullName() : "Unknown User";
+        String employeeId = currentUser != null ? currentUser.getEmployeeId() : "N/A";
+        String role = currentEmployee != null ? currentEmployee.getRoleName() : "EMPLOYEE";
+        String department = currentEmployee != null ? currentEmployee.getDepartment() : "N/A";
+
+        JLabel nameLabel = new JLabel(fullName + " | " + employeeId);
+        nameLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
+        nameLabel.setForeground(Color.BLACK);
+        nameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        header.add(nameLabel);
+
+        JLabel roleLabel = new JLabel(role + " | " + department);
+        roleLabel.setFont(new Font("SansSerif", Font.PLAIN, 16));
+        roleLabel.setForeground(UITheme.TEXT_SECONDARY);
+        roleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        header.add(roleLabel);
+
+        panel.add(header);
         panel.add(Box.createRigidArea(new Dimension(0, 25)));
 
-        // Attendance control card
+        // Attendance Card
         panel.add(createAttendanceCard());
         panel.add(Box.createRigidArea(new Dimension(0, 25)));
 
-        // Metrics row (with 2 cards)
-        panel.add(createMetricsRow());
+        // Metrics Row
+        JPanel metrics = new JPanel(new GridLayout(1, 2, 20, 0));
+        metrics.setOpaque(false);
+        metrics.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
+        metrics.add(UITheme.createMetricCard("CURRENT STATUS", getDetailedStatus()));
+        metrics.add(UITheme.createMetricCard("TOTAL HOURS", String.format("%.1f Hours Logged", calculateMonthlyHours())));
+
+        panel.add(metrics);
         panel.add(Box.createRigidArea(new Dimension(0, 25)));
 
-        // Info cards row
-        panel.add(createInfoCards());
+        // Information Boxes
+        JPanel info = new JPanel(new GridLayout(1, 2, 20, 0));
+        info.setOpaque(false);
+        info.setMaximumSize(new Dimension(Integer.MAX_VALUE, 260));
 
-        return panel;
-    }
+        // Formatting Birth Date safely
+        String bdayStr = (currentEmployee.getBirthDate() != null)
+                ? currentEmployee.getBirthDate().format(DateTimeFormatter.ofPattern("MMM dd, yyyy")) : "N/A";
 
-    private JPanel createWelcomeHeader() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setOpaque(false);
-        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        // Personal Details
+        String[][] personalData = {
+                {"Full Name", currentEmployee.getFullName()},
+                {"Birthday", bdayStr},
+                {"Phone Number", currentEmployee.getPhoneNumber() != null ? currentEmployee.getPhoneNumber() : "—"},
+                {"Email Address", currentEmployee.getEmail() != null ? currentEmployee.getEmail() : "—"},
+                {"Home Address", truncate(currentEmployee.getAddress() != null ? currentEmployee.getAddress() : "—", 35)}
+        };
+        info.add(UITheme.createDataCard("PERSONAL INFORMATION", personalData));
 
-        String firstName = currentEmployee != null ? currentEmployee.getFirstName() : "User";
-        JLabel welcomeLabel = new JLabel("Welcome, " + currentEmployee.getFirstName() + " " + currentEmployee.getLastName() + "!");;
-        welcomeLabel.setFont(new Font("SansSerif", Font.BOLD, 32));
-        welcomeLabel.setForeground(UITheme.TEXT_PRIMARY);
-        panel.add(welcomeLabel, BorderLayout.WEST);
+        // Employment Details - Fixed Department display
+        String departmentDisplay = currentEmployee != null ? currentEmployee.getDepartment() : "N/A";
+        String statusDisplay = currentEmployee != null && currentEmployee.getStatus() != null
+                ? currentEmployee.getStatus().getDisplayName() : "N/A";
+        String supervisorDisplay = currentEmployee != null && currentEmployee.getImmediateSupervisor() != null
+                ? currentEmployee.getImmediateSupervisor() : "None";
 
+        String[][] employmentData = {
+                {"Work Status", statusDisplay},
+                {"Position", currentEmployee != null && currentEmployee.getPosition() != null ? currentEmployee.getPosition() : "—"},
+                {"Department", departmentDisplay},
+                {"Immediate Sup.", supervisorDisplay},
+                {"Base Salary", currentEmployee != null ? String.format("PHP %,.2f", currentEmployee.getBasicSalary()) : "PHP 0.00"}
+        };
+        info.add(UITheme.createDataCard("EMPLOYMENT OVERVIEW", employmentData));
+
+        panel.add(info);
         return panel;
     }
 
@@ -284,347 +247,131 @@ public class MainDashboardPanel extends JPanel {
         card.setBackground(UITheme.CARD_BG);
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UITheme.BORDER_COLOR),
-                BorderFactory.createEmptyBorder(20, 25, 20, 25)
+                BorderFactory.createEmptyBorder(25, 30, 25, 30)
         ));
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 140));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 180));
 
-        // Title
-        JLabel titleLabel = UITheme.createSectionHeader("ATTENDANCE CONTROL");
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.add(titleLabel);
-        card.add(Box.createRigidArea(new Dimension(0, 12)));
+        JPanel titleRow = new JPanel(new BorderLayout());
+        titleRow.setOpaque(false);
+        titleRow.add(UITheme.createSectionHeader("ATTENDANCE CONTROL"), BorderLayout.WEST);
 
-        // Create status label first
-        attendanceStatusLabel = new JLabel();
+        attendanceStatusLabel = new JLabel("SYNCING...");
         attendanceStatusLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
+        titleRow.add(attendanceStatusLabel, BorderLayout.EAST);
 
-        // Status panel
-        JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 0));
-        statusPanel.setBackground(UITheme.CARD_BG);
-        statusPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.add(titleRow);
+        card.add(Box.createRigidArea(new Dimension(0, 20)));
 
-        // Get current shift info
-        Map<String, String> shiftInfo = new HashMap<>();
-        String employeeId = currentUser != null ? currentUser.getEmployeeId() : null;
+        JPanel mainRow = new JPanel(new BorderLayout());
+        mainRow.setOpaque(false);
 
-        if (employeeId != null) {
-            try {
-                shiftInfo = attendanceService.getCurrentShiftInfo(employeeId);
-            } catch (Exception e) {
-                e.printStackTrace();
-                shiftInfo.put("status", "NOT CLOCKED IN");
-                shiftInfo.put("timeIn", "—");
-                shiftInfo.put("elapsed", "—");
-            }
-        } else {
-            shiftInfo.put("status", "NO EMPLOYEE ID");
-            shiftInfo.put("timeIn", "—");
-            shiftInfo.put("elapsed", "—");
-        }
-
-        // Update status label
-        String status = shiftInfo.get("status");
-        attendanceStatusLabel.setText(status);
-
-        // Set color based on status
-        if ("CLOCKED_IN".equals(status) || "CLOCKED IN".equals(status)) {
-            attendanceStatusLabel.setForeground(UITheme.ACCENT_GREEN);
-        } else if ("COMPLETED".equals(status)) {
-            attendanceStatusLabel.setForeground(UITheme.ACCENT_BLUE);
-        } else {
-            attendanceStatusLabel.setForeground(UITheme.TEXT_SECONDARY);
-        }
-
-        statusPanel.add(attendanceStatusLabel);
-
-        // Time display
-        if (!shiftInfo.get("timeIn").equals("—")) {
-            JLabel timeInLabel = new JLabel("IN: " + shiftInfo.get("timeIn"));
-            timeInLabel.setFont(UITheme.MONO_FONT);
-            timeInLabel.setForeground(UITheme.TEXT_SECONDARY);
-            statusPanel.add(timeInLabel);
-        }
-
-        if (shiftInfo.containsKey("timeOut")) {
-            JLabel timeOutLabel = new JLabel("OUT: " + shiftInfo.get("timeOut"));
-            timeOutLabel.setFont(UITheme.MONO_FONT);
-            timeOutLabel.setForeground(UITheme.TEXT_SECONDARY);
-            statusPanel.add(timeOutLabel);
-        }
-
-        if (shiftInfo.containsKey("elapsed") && !shiftInfo.get("elapsed").equals("—")) {
-            JLabel elapsedLabel = new JLabel("ELAPSED: " + shiftInfo.get("elapsed"));
-            elapsedLabel.setFont(UITheme.MONO_FONT);
-            elapsedLabel.setForeground(UITheme.TEXT_SECONDARY);
-            statusPanel.add(elapsedLabel);
-        }
-
-        card.add(statusPanel);
-        card.add(Box.createRigidArea(new Dimension(0, 15)));
-
-        // Buttons
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        buttonPanel.setBackground(UITheme.CARD_BG);
-        buttonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        btnPanel.setOpaque(false);
         timeInBtn = UITheme.createPrimaryButton("TIME IN", UITheme.ACCENT_GREEN);
-        timeInBtn.setPreferredSize(new Dimension(100, 35));
-        timeInBtn.addActionListener(e -> timeIn());
-        buttonPanel.add(timeInBtn);
-
         timeOutBtn = UITheme.createPrimaryButton("TIME OUT", UITheme.ACCENT_RED);
-        timeOutBtn.setPreferredSize(new Dimension(100, 35));
+        timeInBtn.setPreferredSize(new Dimension(110, 40));
+        timeOutBtn.setPreferredSize(new Dimension(110, 40));
+        btnPanel.add(timeInBtn);
+        btnPanel.add(Box.createRigidArea(new Dimension(10, 0)));
+        btnPanel.add(timeOutBtn);
+        mainRow.add(btnPanel, BorderLayout.WEST);
+
+        JPanel clockPanel = new JPanel(new GridLayout(2, 1, 0, 0));
+        clockPanel.setOpaque(false);
+        dateLabel = new JLabel("", SwingConstants.RIGHT);
+        clockLabel = new JLabel("", SwingConstants.RIGHT);
+        clockLabel.setFont(new Font("Monospaced", Font.BOLD, 22));
+        clockPanel.add(dateLabel);
+        clockPanel.add(clockLabel);
+        mainRow.add(clockPanel, BorderLayout.EAST);
+
+        card.add(mainRow);
+
+        timeInBtn.addActionListener(e -> timeIn());
         timeOutBtn.addActionListener(e -> timeOut());
-        buttonPanel.add(timeOutBtn);
-
-        // Update button states based on status
-        updateAttendanceButtonStates();
-
-        card.add(buttonPanel);
 
         return card;
     }
 
-    private JPanel createMetricsRow() {
-        // GridLayout with 2 cards
-        JPanel panel = new JPanel(new GridLayout(1, 2, 15, 0));
-        panel.setOpaque(false);
-        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
-        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        YearMonth currentMonth = YearMonth.now();
-
-        panel.add(UITheme.createMetricCard(
-                "ATTENDANCE",
-                getAttendanceMetric()
-        ));
-
-        double totalHours = 0;
-        String employeeId = currentUser != null ? currentUser.getEmployeeId() : null;
-
-        if (employeeId != null) {
-            try {
-                totalHours = attendanceService.getTotalHoursWorked(
-                        employeeId,
-                        currentMonth.atDay(1),
-                        currentMonth.atEndOfMonth()
-                );
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        panel.add(UITheme.createMetricCard(
-                "HOURS THIS MONTH",
-                String.format("%.1f hrs", totalHours)
-        ));
-
-        return panel;
-    }
-
-    private JPanel createInfoCards() {
-        JPanel panel = new JPanel(new GridLayout(1, 2, 15, 0));
-        panel.setOpaque(false);
-        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 220));
-
-        // Personal details
-        String[][] personalData = {
-                {"Email", currentEmployee != null && currentEmployee.getEmail() != null ? currentEmployee.getEmail() : "—"},
-                {"Contact", formatPhone(currentEmployee != null ? currentEmployee.getPhoneNumber() : null)},
-                {"Birthdate", currentEmployee != null && currentEmployee.getBirthDate() != null ?
-                        currentEmployee.getBirthDate().format(DateTimeFormatter.ofPattern("MMM dd, yyyy")) : "—"},
-                {"Address", truncate(currentEmployee != null ? currentEmployee.getAddress() : "", 30)}
-        };
-
-        // Employment details
-        String[][] employmentData = {
-                {"Position", currentEmployee != null && currentEmployee.getPosition() != null ? currentEmployee.getPosition() : "—"},
-                {"Department", currentEmployee != null ? currentEmployee.getDepartment() : "—"},
-                {"Status", currentEmployee != null && currentEmployee.getStatus() != null ?
-                        currentEmployee.getStatus().getDisplayName() : "—"},
-                {"Supervisor", currentEmployee != null && currentEmployee.getImmediateSupervisor() != null ?
-                        currentEmployee.getImmediateSupervisor() : "—"}
-        };
-
-        panel.add(UITheme.createDataCard("PERSONAL DETAILS", personalData));
-        panel.add(UITheme.createDataCard("EMPLOYMENT DETAILS", employmentData));
-
-        return panel;
-    }
-
-    // ========== ATTENDANCE METHODS ==========
-
-    private String getAttendanceMetric() {
-        String employeeId = currentUser != null ? currentUser.getEmployeeId() : null;
-        if (employeeId == null) return "N/A";
-
+    private void updateAttendanceButtonStates() {
         try {
-            Attendance today = attendanceService.getTodayAttendance(employeeId);
-            if (today == null) return "NOT IN";
-            if (today.getTimeOut() == null) return "ACTIVE";
-            return "PRESENT";
+            Attendance today = attendanceService.getTodayAttendance(currentUser.getEmployeeId());
+            if (today == null) {
+                timeInBtn.setEnabled(true);
+                timeOutBtn.setEnabled(false);
+                attendanceStatusLabel.setText("NOT CLOCKED IN");
+                attendanceStatusLabel.setForeground(UITheme.TEXT_SECONDARY);
+            } else if (today.getTimeOut() == null) {
+                timeInBtn.setEnabled(false);
+                timeOutBtn.setEnabled(true);
+                attendanceStatusLabel.setText("SHIFT IN PROGRESS");
+                attendanceStatusLabel.setForeground(UITheme.ACCENT_GREEN);
+            } else {
+                timeInBtn.setEnabled(false);
+                timeOutBtn.setEnabled(false);
+                attendanceStatusLabel.setText("SHIFT COMPLETED");
+                attendanceStatusLabel.setForeground(UITheme.ACCENT_BLUE);
+            }
         } catch (Exception e) {
-            e.printStackTrace();
-            return "NOT IN";
+            timeInBtn.setEnabled(true);
+            timeOutBtn.setEnabled(false);
+            attendanceStatusLabel.setText("ERROR");
+            attendanceStatusLabel.setForeground(UITheme.ACCENT_RED);
         }
     }
 
     private void timeIn() {
-        String employeeId = currentUser != null ? currentUser.getEmployeeId() : null;
-        if (employeeId == null) {
-            controller.showError("No employee ID found");
-            return;
-        }
-
         try {
-            System.out.println("Attempting time in for employee: " + employeeId);
-
-            // Disable buttons during operation
-            timeInBtn.setEnabled(false);
-            timeOutBtn.setEnabled(false);
-
-            boolean success = attendanceService.timeIn(employeeId);
-
-            if (success) {
-                controller.showInfo("TIME IN RECORDED AT " +
-                        LocalTime.now().format(DateTimeFormatter.ofPattern("hh:mm a")));
-                refreshDashboard();
+            if (attendanceService.timeIn(currentUser.getEmployeeId())) {
+                updateAttendanceButtonStates();
             }
-        } catch (IllegalArgumentException e) {
-            controller.showError(e.getMessage());
-            // Re-enable buttons based on current state
-            updateAttendanceButtonStates();
-        } catch (Exception e) {
-            e.printStackTrace();
-            controller.showError("Error during time in: " + e.getMessage());
-        } finally {
-            // Ensure buttons are re-enabled
-            updateAttendanceButtonStates();
-        }
+        } catch (Exception e) { controller.showError(e.getMessage()); }
     }
 
     private void timeOut() {
-        String employeeId = currentUser != null ? currentUser.getEmployeeId() : null;
-        if (employeeId == null) {
-            controller.showError("No employee ID found");
-            return;
-        }
-
         try {
-            System.out.println("Attempting time out for employee: " + employeeId);
-
-            // Disable buttons during operation
-            timeInBtn.setEnabled(false);
-            timeOutBtn.setEnabled(false);
-
-            boolean success = attendanceService.timeOut(employeeId);
-
-            if (success) {
-                controller.showInfo("TIME OUT RECORDED AT " +
-                        LocalTime.now().format(DateTimeFormatter.ofPattern("hh:mm a")));
-                refreshDashboard();
+            if (attendanceService.timeOut(currentUser.getEmployeeId())) {
+                updateAttendanceButtonStates();
             }
-        } catch (IllegalArgumentException e) {
-            controller.showError(e.getMessage());
-            // Re-enable buttons based on current state
-            updateAttendanceButtonStates();
-        } catch (Exception e) {
-            e.printStackTrace();
-            controller.showError("Error during time out: " + e.getMessage());
-        } finally {
-            // Ensure buttons are re-enabled
-            updateAttendanceButtonStates();
-        }
+        } catch (Exception e) { controller.showError(e.getMessage()); }
     }
-
-    private void updateAttendanceButtonStates() {
-        String employeeId = currentUser != null ? currentUser.getEmployeeId() : null;
-
-        try {
-            Map<String, String> shiftInfo = attendanceService.getCurrentShiftInfo(employeeId);
-            String status = shiftInfo.get("status");
-
-            System.out.println("Updating button states based on status: '" + status + "'");
-
-            // Update button states based on current status
-            boolean timeInEnabled = "NOT CLOCKED IN".equals(status) || "NO_TIME_IN".equals(status);
-            boolean timeOutEnabled = "CLOCKED_IN".equals(status) || "CLOCKED IN".equals(status);
-
-            System.out.println("Time In enabled: " + timeInEnabled);
-            System.out.println("Time Out enabled: " + timeOutEnabled);
-
-            timeInBtn.setEnabled(timeInEnabled);
-            timeOutBtn.setEnabled(timeOutEnabled);
-
-            // Update status label
-            if (attendanceStatusLabel != null) {
-                attendanceStatusLabel.setText(status);
-                if ("CLOCKED_IN".equals(status) || "CLOCKED IN".equals(status)) {
-                    attendanceStatusLabel.setForeground(UITheme.ACCENT_GREEN);
-                } else if ("COMPLETED".equals(status)) {
-                    attendanceStatusLabel.setForeground(UITheme.ACCENT_BLUE);
-                } else {
-                    attendanceStatusLabel.setForeground(UITheme.TEXT_SECONDARY);
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Error updating attendance button states: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    private void refreshDashboard() {
-        // Refresh the entire dashboard content
-        contentArea.removeAll();
-        contentArea.add(createDashboardContent(), "DASHBOARD");
-        contentLayout.show(contentArea, "DASHBOARD");
-        contentArea.revalidate();
-        contentArea.repaint();
-    }
-
-    // ========== NAVIGATION METHODS ==========
-
-    private void showDashboard() {
-        contentLayout.show(contentArea, "DASHBOARD");
-    }
-
-    private void showUserAccounts() {
-        controller.showInfo("User accounts feature coming soon");
-    }
-
-    private void showSystemLogs() {
-        controller.showInfo("System logs feature coming soon");
-    }
-
-    // ========== CLOCK ==========
 
     private void startClock() {
         clockTimer = new javax.swing.Timer(1000, e -> {
             LocalDateTime now = LocalDateTime.now();
-            dateLabel.setText(now.format(DateTimeFormatter.ofPattern("EEEE, MMMM dd, yyyy")).toUpperCase());
+            dateLabel.setText(now.format(DateTimeFormatter.ofPattern("EEEE, MMM dd, yyyy")).toUpperCase());
             clockLabel.setText(now.format(DateTimeFormatter.ofPattern("hh:mm:ss a")));
         });
         clockTimer.start();
     }
 
-    // ========== UTILITY METHODS ==========
+    private void showDashboard() {
+        contentArea.revalidate();
+        contentArea.repaint();
+        contentLayout.show(contentArea, "DASHBOARD");
+    }
 
-    private String formatPhone(String phone) {
-        if (phone == null || phone.trim().isEmpty()) return "—";
-        String clean = phone.replaceAll("[^0-9]", "");
-        if (clean.length() == 11) {
-            return clean.substring(0, 4) + "-" + clean.substring(4, 7) + "-" + clean.substring(7);
-        }
-        if (clean.length() == 10) {
-            return clean.substring(0, 3) + "-" + clean.substring(3, 6) + "-" + clean.substring(6);
-        }
-        return phone;
+    private String getDetailedStatus() {
+        try {
+            Attendance today = attendanceService.getTodayAttendance(currentUser.getEmployeeId());
+            if (today == null) return "READY TO IN";
+            if (today.getTimeOut() == null) return "LOGGED IN";
+            return "FINISHED";
+        } catch (Exception e) { return "ERROR"; }
+    }
+
+    private double calculateMonthlyHours() {
+        try {
+            return attendanceService.getTotalHoursWorked(
+                    currentUser.getEmployeeId(),
+                    YearMonth.now().atDay(1),
+                    YearMonth.now().atEndOfMonth()
+            );
+        } catch (Exception e) { return 0.0; }
     }
 
     private String truncate(String text, int maxLength) {
         if (text == null || text.length() <= maxLength) return text;
         return text.substring(0, maxLength) + "...";
     }
-
 }
