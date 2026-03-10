@@ -10,6 +10,7 @@ import java.util.*;
 
 public class MainController {
 
+    // ========== DEPENDENCIES ==========
     private UserService userService;
     private EmployeeService employeeService;
     private PayrollService payrollService;
@@ -18,6 +19,7 @@ public class MainController {
     private TicketService ticketService;
     private SystemLogService systemLogService;
 
+    // ========== DAOs ==========
     private EmployeeDAO employeeDAO;
     private AttendanceDAO attendanceDAO;
     private LeaveRequestDAO leaveDAO;
@@ -26,21 +28,26 @@ public class MainController {
     private TicketDAO ticketDAO;
     private SystemLogDAO systemLogDAO;
 
+    // ========== UI ==========
     private MainFrame mainFrame;
     private User currentUser;
     private Employee currentEmployee;
 
+    // ========== NAVIGATION ==========
     private Stack<NavigationState> navigationHistory = new Stack<>();
     private static final int MAX_HISTORY_SIZE = 10;
 
-    private static final String DATA_DIR = "data/";
-    private static final String EMPLOYEE_FILE = "MotorPH_Employee_Details.csv";
+    // ========== CONFIG ==========
+    private static final String DATA_DIR        = "data/";
+    private static final String EMPLOYEE_FILE   = "MotorPH_Employee_Details.csv";
     private static final String ATTENDANCE_FILE = "MotorPH_Attendance_Record.csv";
-    private static final String LEAVE_FILE = "leave_requests.csv";
-    private static final String PAYROLL_FILE = "payroll.csv";
-    private static final String USERS_FILE = "users.csv";
-    private static final String TICKET_FILE = "tickets.csv";
+    private static final String LEAVE_FILE      = "leave_requests.csv";
+    private static final String PAYROLL_FILE    = "payroll.csv";
+    private static final String USERS_FILE      = "users.csv";
+    private static final String TICKET_FILE     = "tickets.csv";
     private static final String SYSTEM_LOG_FILE = "system_logs.csv";
+
+    // ========== INNER CLASS ==========
 
     private static class NavigationState {
         JPanel panel;
@@ -58,11 +65,15 @@ public class MainController {
         }
     }
 
+    // ========== CONSTRUCTOR ==========
+
     public MainController() {
         initializeDataDirectory();
         initializeDAOs();
         initializeServices();
     }
+
+    // ========== INITIALIZATION ==========
 
     private void initializeDataDirectory() {
         File dataDir = new File(DATA_DIR);
@@ -70,47 +81,52 @@ public class MainController {
     }
 
     private void initializeDAOs() {
-        this.employeeDAO = new EmployeeDAO(DATA_DIR + EMPLOYEE_FILE);
+        this.employeeDAO  = new EmployeeDAO(DATA_DIR + EMPLOYEE_FILE);
         this.attendanceDAO = new AttendanceDAO(DATA_DIR + ATTENDANCE_FILE);
-        this.leaveDAO = new LeaveRequestDAO(DATA_DIR + LEAVE_FILE);
-        this.payrollDAO = new PayrollDAO(DATA_DIR + PAYROLL_FILE);
-        this.userDAO = new UserDAO(DATA_DIR + USERS_FILE);
-        this.ticketDAO = new TicketDAO(DATA_DIR + TICKET_FILE);
+        this.leaveDAO     = new LeaveRequestDAO(DATA_DIR + LEAVE_FILE);
+        this.payrollDAO   = new PayrollDAO(DATA_DIR + PAYROLL_FILE);
+        this.userDAO      = new UserDAO(DATA_DIR + USERS_FILE);
+        this.ticketDAO    = new TicketDAO(DATA_DIR + TICKET_FILE);
         this.systemLogDAO = new SystemLogDAO(DATA_DIR + SYSTEM_LOG_FILE);
     }
 
     private void initializeServices() {
         this.validationService = new ValidationService();
         this.userDAO.setEmployeeDAO(this.employeeDAO);
-        this.employeeService = new EmployeeService(employeeDAO, attendanceDAO, leaveDAO, validationService);
+        this.employeeService  = new EmployeeService(employeeDAO, attendanceDAO, leaveDAO, validationService);
         this.attendanceService = new AttendanceService(attendanceDAO, this.employeeService);
-        this.payrollService = new PayrollService(payrollDAO, employeeDAO, attendanceDAO);
-        this.userService = new UserService(userDAO, employeeDAO, validationService);
-        this.ticketService = new TicketService(ticketDAO, systemLogDAO);
+        this.payrollService   = new PayrollService(payrollDAO, employeeDAO, attendanceDAO);
+        this.userService      = new UserService(userDAO, employeeDAO, validationService);
+        this.ticketService    = new TicketService(ticketDAO, systemLogDAO);
         this.systemLogService = new SystemLogService(systemLogDAO);
     }
+
+    // ========== LIFECYCLE ==========
 
     public void start() {
         SwingUtilities.invokeLater(() -> {
             try {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             } catch (Exception e) {
-                // Use default look and feel
+                // Use default
             }
             mainFrame = new MainFrame(this);
             showLogin();
             mainFrame.setVisible(true);
-            systemLogService.logInfo("System", null, "APPLICATION_START", "MotorPH Payroll System started");
+            systemLogService.logInfo("System", null, "APPLICATION_START",
+                    "MotorPH Payroll System started");
         });
     }
 
     public void shutdown() {
-        if (currentUser != null) {
+        if (systemLogService != null && currentUser != null) {
             systemLogService.logInfo("System", currentUser, "APPLICATION_SHUTDOWN",
                     "User " + currentUser.getUsername() + " logged out");
         }
         navigationHistory.clear();
     }
+
+    // ========== NAVIGATION ==========
 
     public void showLogin() {
         navigationHistory.clear();
@@ -119,18 +135,18 @@ public class MainController {
         setMainContent(new LoginPanel(this), "LOGIN");
     }
 
+    /** Navigate without state */
     public void navigateTo(JPanel panel, String name) {
         navigateTo(panel, name, null);
     }
 
+    /** Navigate with state */
     public void navigateTo(JPanel panel, String name, Object state) {
         if (mainFrame.getCurrentPanel() != null) {
-            NavigationState currentState = new NavigationState(
+            navigationHistory.push(new NavigationState(
                     mainFrame.getCurrentPanel(),
                     getCurrentPanelName(),
-                    getCurrentPanelState()
-            );
-            navigationHistory.push(currentState);
+                    getCurrentPanelState()));
             if (navigationHistory.size() > MAX_HISTORY_SIZE)
                 navigationHistory.removeElementAt(0);
         }
@@ -156,8 +172,10 @@ public class MainController {
         mainFrame.setCurrentPanelState(state);
     }
 
-    private String getCurrentPanelName() { return mainFrame.getCurrentPanelName(); }
+    private String getCurrentPanelName()  { return mainFrame.getCurrentPanelName(); }
     private Object getCurrentPanelState() { return mainFrame.getCurrentPanelState(); }
+
+    // ========== AUTHENTICATION ==========
 
     public void handleLogin(String employeeId, String password) {
         try {
@@ -204,6 +222,8 @@ public class MainController {
         showLogin();
     }
 
+    // ========== PANEL NAVIGATION ==========
+
     public void showDashboard() {
         if (currentUser == null || currentEmployee == null) {
             showLogin();
@@ -212,15 +232,15 @@ public class MainController {
         MainDashboardPanel dashboard = new MainDashboardPanel(
                 this, userService, employeeService, payrollService,
                 attendanceService, ticketService, systemLogService,
-                currentUser, currentEmployee
-        );
+                currentUser, currentEmployee);
         navigateTo(dashboard, "DASHBOARD");
     }
 
     public void showEmployeeManagement() {
         try {
             checkAccess("EMPLOYEE_MANAGEMENT");
-            EmployeeManagementPanel panel = new EmployeeManagementPanel(this, employeeService, userService);
+            EmployeeManagementPanel panel =
+                    new EmployeeManagementPanel(this, employeeService, userService);
             navigateTo(panel, "EMPLOYEE_MANAGEMENT");
             systemLogService.logAudit("Navigation", currentUser,
                     "ACCESS_EMPLOYEE_MANAGEMENT", "User accessed Employee Management panel");
@@ -230,19 +250,22 @@ public class MainController {
     }
 
     public void showAttendance() {
-        AttendancePanel panel = new AttendancePanel(this, employeeService, attendanceService, currentUser);
+        AttendancePanel panel =
+                new AttendancePanel(this, employeeService, attendanceService, currentUser);
         navigateTo(panel, "ATTENDANCE");
     }
 
     public void showPayslip() {
-        PayslipPanel panel = new PayslipPanel(this, payrollService, employeeService, currentUser, currentEmployee);
+        PayslipPanel panel = new PayslipPanel(
+                this, payrollService, employeeService, currentUser, currentEmployee);
         navigateTo(panel, "PAYSLIP");
     }
 
     public void showPayrollProcessing() {
         try {
             checkAnyRole(User.Role.ADMIN, User.Role.FINANCE);
-            PayrollProcessingPanel panel = new PayrollProcessingPanel(this, payrollService, employeeService, currentUser);
+            PayrollProcessingPanel panel =
+                    new PayrollProcessingPanel(this, payrollService, employeeService, currentUser);
             navigateTo(panel, "PAYROLL_PROCESSING");
             systemLogService.logAudit("Navigation", currentUser,
                     "ACCESS_PAYROLL_PROCESSING", "User accessed Payroll Processing panel");
@@ -269,14 +292,16 @@ public class MainController {
     }
 
     public void showSubmitTicket() {
-        SubmitTicketPanel panel = new SubmitTicketPanel(this, ticketService, systemLogService, currentUser);
+        SubmitTicketPanel panel =
+                new SubmitTicketPanel(this, ticketService, systemLogService, currentUser);
         navigateTo(panel, "SUBMIT_TICKET");
     }
 
     public void showTicketManagement() {
         try {
             checkAnyRole(User.Role.ADMIN, User.Role.IT);
-            TicketManagementPanel panel = new TicketManagementPanel(this, ticketService, systemLogService, currentUser);
+            TicketManagementPanel panel =
+                    new TicketManagementPanel(this, ticketService, systemLogService, currentUser);
             navigateTo(panel, "TICKET_MANAGEMENT");
             systemLogService.logAudit("Navigation", currentUser,
                     "ACCESS_TICKET_MANAGEMENT", "User accessed Ticket Management panel");
@@ -288,7 +313,8 @@ public class MainController {
     public void showSystemLogs() {
         try {
             checkAnyRole(User.Role.ADMIN, User.Role.IT);
-            SystemLogsPanel panel = new SystemLogsPanel(this, systemLogService, currentUser);
+            SystemLogsPanel panel =
+                    new SystemLogsPanel(this, systemLogService, currentUser);
             navigateTo(panel, "SYSTEM_LOGS");
             systemLogService.logAudit("Navigation", currentUser,
                     "ACCESS_SYSTEM_LOGS", "User accessed System Logs panel");
@@ -297,11 +323,34 @@ public class MainController {
         }
     }
 
+    // ========== CHANGE PASSWORD ==========
+
+    /**
+     * Open the Change Password dialog for the currently logged-in user.
+     * Available to ALL roles — every user can change their own password.
+     */
+    public void showChangePasswordDialog() {
+        if (currentUser == null) return;
+
+        ChangePasswordDialog dialog = new ChangePasswordDialog(
+                mainFrame, this, userService, validationService, currentUser);
+        dialog.setVisible(true);
+
+        if (dialog.isPasswordChanged()) {
+            systemLogService.logAudit("Security", currentUser,
+                    "PASSWORD_CHANGED",
+                    "User " + currentUser.getUsername() + " changed their password");
+        }
+    }
+
+    // ========== DIALOGS ==========
+
     public void showEmployeeDetails(Employee employee) {
         EmployeeDetailsDialog dialog = new EmployeeDetailsDialog(mainFrame, employee);
         dialog.setVisible(true);
         systemLogService.logInfo("Employee Management", currentUser,
-                "VIEW_EMPLOYEE_DETAILS", "Viewed details for employee: " + employee.getEmployeeId());
+                "VIEW_EMPLOYEE_DETAILS",
+                "Viewed details for employee: " + employee.getEmployeeId());
     }
 
     public void showEmployeeDialog(Employee employee, String title) {
@@ -309,12 +358,16 @@ public class MainController {
                 mainFrame, title, employee, employeeService, validationService, this);
         dialog.setVisible(true);
         if (dialog.isSaved()) {
-            String action = employee == null ? "ADD_EMPLOYEE" : "EDIT_EMPLOYEE";
-            String details = employee == null ? "Added new employee" : "Edited employee: " + employee.getEmployeeId();
+            String action  = employee == null ? "ADD_EMPLOYEE" : "EDIT_EMPLOYEE";
+            String details = employee == null
+                    ? "Added new employee"
+                    : "Edited employee: " + employee.getEmployeeId();
             systemLogService.logAudit("Employee Management", currentUser, action, details);
             refreshCurrentPanel();
         }
     }
+
+    // ========== MESSAGE HELPERS ==========
 
     public boolean showConfirm(String message, String title) {
         return JOptionPane.showConfirmDialog(mainFrame, message, title,
@@ -322,20 +375,25 @@ public class MainController {
     }
 
     public void showInfo(String message) {
-        JOptionPane.showMessageDialog(mainFrame, message, "Information", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(mainFrame, message, "Information",
+                JOptionPane.INFORMATION_MESSAGE);
     }
 
     public void showWarning(String message) {
-        JOptionPane.showMessageDialog(mainFrame, message, "Warning", JOptionPane.WARNING_MESSAGE);
+        JOptionPane.showMessageDialog(mainFrame, message, "Warning",
+                JOptionPane.WARNING_MESSAGE);
     }
 
     public void showError(String message) {
-        JOptionPane.showMessageDialog(mainFrame, message, "Error", JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(mainFrame, message, "Error",
+                JOptionPane.ERROR_MESSAGE);
     }
 
     public String showInput(String message, String initialValue) {
         return JOptionPane.showInputDialog(mainFrame, message, initialValue);
     }
+
+    // ========== ACCESS CONTROL ==========
 
     private void checkAccess(String feature) {
         if (currentUser == null) throw new SecurityException("Not logged in");
@@ -356,9 +414,11 @@ public class MainController {
         throw new SecurityException("Insufficient privileges");
     }
 
+    // ========== REFRESH ==========
+
     public void refreshCurrentPanel() {
         JPanel current = mainFrame.getCurrentPanel();
-        String name = mainFrame.getCurrentPanelName();
+        String name    = mainFrame.getCurrentPanelName();
         if (current == null || name == null) return;
         JPanel newPanel = recreatePanel(name);
         if (newPanel != null) setMainContent(newPanel, name, mainFrame.getCurrentPanelState());
@@ -375,7 +435,8 @@ public class MainController {
             case "ATTENDANCE":
                 return new AttendancePanel(this, employeeService, attendanceService, currentUser);
             case "PAYSLIP":
-                return new PayslipPanel(this, payrollService, employeeService, currentUser, currentEmployee);
+                return new PayslipPanel(this, payrollService, employeeService,
+                        currentUser, currentEmployee);
             case "PAYROLL_PROCESSING":
                 return new PayrollProcessingPanel(this, payrollService, employeeService, currentUser);
             case "LEAVE_REQUEST":
@@ -393,16 +454,20 @@ public class MainController {
         }
     }
 
-    public UserService getUserService() { return userService; }
-    public EmployeeService getEmployeeService() { return employeeService; }
-    public PayrollService getPayrollService() { return payrollService; }
+    // ========== GETTERS ==========
+
+    public UserService getUserService()             { return userService; }
+    public EmployeeService getEmployeeService()     { return employeeService; }
+    public PayrollService getPayrollService()       { return payrollService; }
     public AttendanceService getAttendanceService() { return attendanceService; }
     public ValidationService getValidationService() { return validationService; }
-    public TicketService getTicketService() { return ticketService; }
-    public SystemLogService getSystemLogService() { return systemLogService; }
-    public User getCurrentUser() { return currentUser; }
-    public Employee getCurrentEmployee() { return currentEmployee; }
-    public MainFrame getMainFrame() { return mainFrame; }
+    public TicketService getTicketService()         { return ticketService; }
+    public SystemLogService getSystemLogService()   { return systemLogService; }
+    public User getCurrentUser()                    { return currentUser; }
+    public Employee getCurrentEmployee()            { return currentEmployee; }
+    public MainFrame getMainFrame()                 { return mainFrame; }
+
+    // ========== DATA REFRESH ==========
 
     public void refreshAllData() {
         employeeDAO.refresh();
@@ -418,7 +483,8 @@ public class MainController {
             if (currentUser != null) currentUser.setEmployee(currentEmployee);
         }
 
-        systemLogService.logInfo("System", currentUser, "DATA_REFRESH", "All data refreshed from files");
+        systemLogService.logInfo("System", currentUser,
+                "DATA_REFRESH", "All data refreshed from files");
         refreshCurrentPanel();
     }
 

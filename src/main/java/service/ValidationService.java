@@ -18,11 +18,9 @@ public class ValidationService {
     private static final Pattern EMAIL_PATTERN =
             Pattern.compile("^[A-Za-z0-9+_.-]+@([A-Za-z0-9-]+\\.)+[A-Za-z]{2,6}$");
 
-    // More flexible phone pattern that accepts various formats
     private static final Pattern PHONE_PATTERN =
             Pattern.compile("^[0-9\\-\\+\\(\\)\\s]{7,20}$");
 
-    // Patterns for government IDs (accept with or without dashes)
     private static final Pattern SSS_PATTERN =
             Pattern.compile("^(\\d{2}-\\d{7}-\\d{1}|\\d{10})$");
 
@@ -81,9 +79,6 @@ public class ValidationService {
 
     // ========== EMPLOYEE VALIDATION ==========
 
-    /**
-     * Validate complete employee object
-     */
     public ValidationResult validateEmployee(Employee emp) {
         ValidationResult result = new ValidationResult();
 
@@ -92,7 +87,6 @@ public class ValidationService {
             return result;
         }
 
-        // Basic info validation
         result.merge(validateEmployeeId(emp.getEmployeeId()));
         result.merge(validateName(emp.getFirstName(), "First name"));
         result.merge(validateName(emp.getLastName(), "Last name"));
@@ -100,18 +94,14 @@ public class ValidationService {
         result.merge(validateAddress(emp.getAddress()));
         result.merge(validatePhone(emp.getPhoneNumber()));
         result.merge(validateEmail(emp.getEmail()));
-
-        // Employment validation
         result.merge(validatePosition(emp.getPosition()));
         result.merge(validateSalary(emp.getBasicSalary()));
         result.merge(validateAllowances(emp));
 
-        // Government IDs validation
         if (emp.getGovernmentIds() != null) {
             result.merge(validateGovernmentIds(emp.getGovernmentIds()));
         }
 
-        // Status-specific validation
         if (emp.isProbationary() && emp.getProbationDetails() == null) {
             result.addFieldError("probationDetails",
                     "Probationary employees must have probation details");
@@ -120,9 +110,6 @@ public class ValidationService {
         return result;
     }
 
-    /**
-     * Validate employee ID
-     */
     public ValidationResult validateEmployeeId(String employeeId) {
         ValidationResult result = new ValidationResult();
 
@@ -135,9 +122,6 @@ public class ValidationService {
         return result;
     }
 
-    /**
-     * Validate name
-     */
     public ValidationResult validateName(String name, String fieldName) {
         ValidationResult result = new ValidationResult();
 
@@ -157,9 +141,6 @@ public class ValidationService {
         return result;
     }
 
-    /**
-     * Validate birth date
-     */
     public ValidationResult validateBirthDate(LocalDate birthDate) {
         ValidationResult result = new ValidationResult();
 
@@ -182,9 +163,6 @@ public class ValidationService {
         return result;
     }
 
-    /**
-     * Validate address
-     */
     public ValidationResult validateAddress(String address) {
         ValidationResult result = new ValidationResult();
 
@@ -199,25 +177,18 @@ public class ValidationService {
         return result;
     }
 
-    /**
-     * Validate phone number (more flexible for CSV import)
-     */
     public ValidationResult validatePhone(String phone) {
         ValidationResult result = new ValidationResult();
 
         if (isNullOrEmpty(phone)) {
             result.addFieldError("phoneNumber", "Phone number is required");
         } else if (!PHONE_PATTERN.matcher(phone).matches()) {
-            result.addFieldError("phoneNumber",
-                    "Invalid phone number format");
+            result.addFieldError("phoneNumber", "Invalid phone number format");
         }
 
         return result;
     }
 
-    /**
-     * Validate email
-     */
     public ValidationResult validateEmail(String email) {
         ValidationResult result = new ValidationResult();
 
@@ -230,9 +201,6 @@ public class ValidationService {
         return result;
     }
 
-    /**
-     * Validate position
-     */
     public ValidationResult validatePosition(String position) {
         ValidationResult result = new ValidationResult();
 
@@ -243,87 +211,72 @@ public class ValidationService {
         return result;
     }
 
-    /**
-     * Validate salary
-     */
     public ValidationResult validateSalary(double salary) {
         ValidationResult result = new ValidationResult();
 
         if (salary < 10000) {
-            result.addFieldError("basicSalary",
-                    "Basic salary must be at least ₱10,000");
+            result.addFieldError("basicSalary", "Basic salary must be at least ₱10,000");
         } else if (salary > 1000000) {
-            result.addFieldError("basicSalary",
-                    "Basic salary cannot exceed ₱1,000,000");
+            result.addFieldError("basicSalary", "Basic salary cannot exceed ₱1,000,000");
         }
 
         return result;
     }
 
-    /**
-     * Validate allowances
-     */
     public ValidationResult validateAllowances(Employee emp) {
         ValidationResult result = new ValidationResult();
 
-        if (emp.getRiceSubsidy() < 0) {
+        if (emp.getRiceSubsidy() < 0)
             result.addFieldError("riceSubsidy", "Rice subsidy cannot be negative");
-        }
-        if (emp.getPhoneAllowance() < 0) {
+        if (emp.getPhoneAllowance() < 0)
             result.addFieldError("phoneAllowance", "Phone allowance cannot be negative");
-        }
-        if (emp.getClothingAllowance() < 0) {
+        if (emp.getClothingAllowance() < 0)
             result.addFieldError("clothingAllowance", "Clothing allowance cannot be negative");
-        }
 
         double totalAllowances = emp.getTotalAllowances();
         if (totalAllowances > emp.getBasicSalary()) {
-            result.addFieldError("allowances",
-                    "Total allowances cannot exceed basic salary");
+            result.addFieldError("allowances", "Total allowances cannot exceed basic salary");
         }
 
         return result;
     }
 
-    /**
-     * Validate government IDs - accepts both formats (with or without dashes)
-     */
     public ValidationResult validateGovernmentIds(GovernmentIds gov) {
         ValidationResult result = new ValidationResult();
 
-        // SSS (optional)
         if (!isNullOrEmpty(gov.getSssNumber())) {
             String clean = gov.getSssNumber().replace("-", "");
             if (!SSS_PATTERN.matcher(gov.getSssNumber()).matches() &&
                     !clean.matches("\\d{10}")) {
-                result.addFieldError("sss", "Invalid SSS format (should be 10 digits or XX-XXXXXXX-X)");
+                result.addFieldError("sss",
+                        "Invalid SSS format (should be 10 digits or XX-XXXXXXX-X)");
             }
         }
 
-        // TIN (optional)
         if (!isNullOrEmpty(gov.getTinNumber())) {
             String clean = gov.getTinNumber().replace("-", "");
             if (!TIN_PATTERN.matcher(gov.getTinNumber()).matches() &&
                     !clean.matches("\\d{12}")) {
-                result.addFieldError("tin", "Invalid TIN format (should be 12 digits or XXX-XXX-XXX-XXX)");
+                result.addFieldError("tin",
+                        "Invalid TIN format (should be 12 digits or XXX-XXX-XXX-XXX)");
             }
         }
 
-        // PhilHealth (optional)
         if (!isNullOrEmpty(gov.getPhilHealthNumber())) {
             String clean = gov.getPhilHealthNumber().replace("-", "");
             if (!PHILHEALTH_PATTERN.matcher(gov.getPhilHealthNumber()).matches() &&
                     !clean.matches("\\d{12}")) {
-                result.addFieldError("philHealth", "Invalid PhilHealth format (should be 12 digits or XX-XXXXXXXXX-X)");
+                result.addFieldError("philHealth",
+                        "Invalid PhilHealth format (should be 12 digits or XX-XXXXXXXXX-X)");
             }
         }
 
-        // Pag-IBIG (optional)
         if (!isNullOrEmpty(gov.getPagIbigNumber())) {
             String clean = gov.getPagIbigNumber().replace("-", "");
             if (!PAGIBIG_PATTERN.matcher(gov.getPagIbigNumber()).matches() &&
                     !clean.matches("\\d{12}")) {
-                result.addFieldError("pagIbig", "Invalid Pag-IBIG format (should be 12 digits or XXXX-XXXX-XXXX)");
+                result.addFieldError("pagIbig",
+                        "Invalid Pag-IBIG format (should be 12 digits or XXXX-XXXX-XXXX)");
             }
         }
 
@@ -332,9 +285,6 @@ public class ValidationService {
 
     // ========== LEAVE REQUEST VALIDATION ==========
 
-    /**
-     * Validate leave request
-     */
     public ValidationResult validateLeaveRequest(LeaveRequest request, Employee employee) {
         ValidationResult result = new ValidationResult();
 
@@ -343,7 +293,6 @@ public class ValidationService {
             return result;
         }
 
-        // Dates validation
         if (request.getStartDate() == null) {
             result.addFieldError("startDate", "Start date is required");
         } else if (request.getStartDate().isBefore(LocalDate.now())) {
@@ -357,7 +306,6 @@ public class ValidationService {
             result.addFieldError("endDate", "End date must be after start date");
         }
 
-        // Duration validation
         if (request.getStartDate() != null && request.getEndDate() != null) {
             int days = request.getNumberOfDays();
             if (days > 30) {
@@ -365,19 +313,16 @@ public class ValidationService {
             }
         }
 
-        // Leave type validation
         if (isNullOrEmpty(request.getLeaveType())) {
             result.addFieldError("leaveType", "Leave type is required");
         }
 
-        // Reason validation
         if (isNullOrEmpty(request.getReason())) {
             result.addFieldError("reason", "Reason is required");
         } else if (request.getReason().length() < 10) {
             result.addFieldError("reason", "Please provide a more detailed reason");
         }
 
-        // Leave credits validation for regular employees
         if (employee instanceof RegularEmployee && request.isPaidLeave()) {
             RegularEmployee reg = (RegularEmployee) employee;
             int days = request.getNumberOfDays();
@@ -393,9 +338,6 @@ public class ValidationService {
 
     // ========== ATTENDANCE VALIDATION ==========
 
-    /**
-     * Validate time in
-     */
     public ValidationResult validateTimeIn(Employee employee, LocalDate date) {
         ValidationResult result = new ValidationResult();
 
@@ -404,7 +346,6 @@ public class ValidationService {
             return result;
         }
 
-        // Check if already timed in today
         boolean hasTimedIn = employee.getAttendanceRecords().stream()
                 .anyMatch(a -> a.getDate().equals(date) && a.getTimeIn() != null);
 
@@ -415,9 +356,6 @@ public class ValidationService {
         return result;
     }
 
-    /**
-     * Validate time out
-     */
     public ValidationResult validateTimeOut(Employee employee, LocalDate date) {
         ValidationResult result = new ValidationResult();
 
@@ -426,7 +364,6 @@ public class ValidationService {
             return result;
         }
 
-        // Find today's attendance
         Attendance today = employee.getAttendanceRecords().stream()
                 .filter(a -> a.getDate().equals(date))
                 .findFirst()
@@ -443,9 +380,6 @@ public class ValidationService {
 
     // ========== LOGIN VALIDATION ==========
 
-    /**
-     * Validate login credentials
-     */
     public ValidationResult validateLogin(String username, String password) {
         ValidationResult result = new ValidationResult();
 
@@ -462,11 +396,43 @@ public class ValidationService {
         return result;
     }
 
-    // ========== PAYROLL VALIDATION ==========
+    // ========== PASSWORD VALIDATION ==========
 
     /**
-     * Validate payroll generation
+     * Validate a new password for change password feature.
+     * Requires min 6 characters, at least one letter and one digit.
      */
+    public ValidationResult validatePassword(String password) {
+        ValidationResult result = new ValidationResult();
+
+        if (isNullOrEmpty(password)) {
+            result.addFieldError("password", "Password is required");
+            return result;
+        }
+
+        if (password.length() < 5) {
+            result.addFieldError("password", "Password must be at least 5 characters");
+            return result;
+        }
+
+        if (password.length() > 50) {
+            result.addFieldError("password", "Password must not exceed 50 characters");
+            return result;
+        }
+
+        boolean hasLetter = password.chars().anyMatch(Character::isLetter);
+        boolean hasDigit  = password.chars().anyMatch(Character::isDigit);
+
+        if (!hasLetter || !hasDigit) {
+            result.addFieldError("password",
+                    "Password must contain at least one letter and one number");
+        }
+
+        return result;
+    }
+
+    // ========== PAYROLL VALIDATION ==========
+
     public ValidationResult validatePayrollGeneration(Employee employee, YearMonth period) {
         ValidationResult result = new ValidationResult();
 
@@ -489,9 +455,6 @@ public class ValidationService {
         return str == null || str.trim().isEmpty();
     }
 
-    /**
-     * Validate date range
-     */
     public ValidationResult validateDateRange(LocalDate start, LocalDate end) {
         ValidationResult result = new ValidationResult();
 
@@ -517,9 +480,6 @@ public class ValidationService {
         return result;
     }
 
-    /**
-     * Validate numeric value
-     */
     public ValidationResult validateNumeric(String value, String fieldName,
                                             double min, double max) {
         ValidationResult result = new ValidationResult();

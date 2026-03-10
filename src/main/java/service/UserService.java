@@ -3,8 +3,11 @@ package service;
 import dao.*;
 import model.*;
 import java.util.*;
+import java.util.logging.Logger;
 
 public class UserService {
+
+    private static final Logger LOGGER = Logger.getLogger(UserService.class.getName());
 
     private final UserDAO userDAO;
     private final EmployeeDAO employeeDAO;
@@ -15,100 +18,51 @@ public class UserService {
         this.userDAO = userDAO;
         this.employeeDAO = employeeDAO;
         this.validator = validator;
-
-        // Link the DAOs
         this.userDAO.setEmployeeDAO(this.employeeDAO);
-
-        // Create default admin if no users exist
         createDefaultAdminIfNeeded();
     }
 
+    // ========== AUTHENTICATION ==========
+
     public boolean login(String username, String password) {
-        System.out.println("=== LOGIN ATTEMPT ===");
-        System.out.println("Username: " + username);
-        System.out.println("Password: " + password);
-
         ValidationService.ValidationResult result = validator.validateLogin(username, password);
-        if (!result.isValid()) {
-            System.out.println("Validation failed: " + result.getErrorMessage());
-            return false;
-        }
+        if (!result.isValid()) return false;
 
-        // Try to find existing user
         User user = userDAO.findByUsername(username);
-        System.out.println("Existing user found: " + (user != null));
 
         if (user != null) {
-            System.out.println("User role from CSV: " + user.getRole());
-            System.out.println("User has employee: " + (user.getEmployee() != null));
-            if (user.getEmployee() != null) {
-                System.out.println("Employee name: " + user.getEmployee().getFullName());
-                System.out.println("Employee ID: " + user.getEmployee().getEmployeeId());
-                System.out.println("Employee class: " + user.getEmployee().getClass().getSimpleName());
-            } else {
-                System.out.println("WARNING: User has no employee object! Attempting to reload...");
-                // Try to reload employee
+            if (user.getEmployee() == null) {
                 Employee emp = employeeDAO.findByEmployeeId(username);
-                if (emp != null) {
-                    user.setEmployee(emp);
-                    System.out.println("Reloaded employee: " + emp.getFullName());
-                }
+                if (emp != null) user.setEmployee(emp);
             }
-            System.out.println("Password match: " + user.getPassword().equals(password));
-            System.out.println("User active: " + user.isActive());
-
             if (user.getPassword().equals(password) && user.isActive()) {
                 currentUser = user;
-                System.out.println("Login successful for: " + username);
-                System.out.println("Final user role: " + currentUser.getRole());
-                System.out.println("Final employee ID: " + currentUser.getEmployeeId());
+                LOGGER.info("Login successful for: " + username);
                 return true;
             }
         }
 
-        // If username is a valid employee ID (5 digits), auto-create
+        // Auto-create user for employees logging in for the first time
         if (username.matches("\\d{5}")) {
             return autoCreateUser(username, password);
         }
 
-        System.out.println("Login failed for: " + username);
+        LOGGER.warning("Login failed for: " + username);
         return false;
     }
 
     private boolean autoCreateUser(String employeeId, String password) {
-        System.out.println("Attempting to auto-create user for employee ID: " + employeeId);
-
-        // Check if employee exists
         Employee emp = employeeDAO.findByEmployeeId(employeeId);
-        if (emp == null) {
-            System.out.println("Employee not found: " + employeeId);
-            return false;
-        }
+        if (emp == null) return false;
 
-        System.out.println("Employee found: " + emp.getFirstName() + " " + emp.getLastName());
-        System.out.println("Employee type: " + emp.getClass().getSimpleName());
-        System.out.println("Employee position: " + emp.getPosition());
+        String lastTwoDigits = employeeId.substring(employeeId.length() - 2);
+        String expectedPassword = "emp" + lastTwoDigits;
 
-        // Validate password format - should be "emp" + last digit of employee ID
-        String lastDigit = employeeId.substring(employeeId.length() - 1);
-        String expectedPassword = "emp" + lastDigit;
+        if (!expectedPassword.equals(password)) return false;
 
-        System.out.println("Expected password format: " + expectedPassword);
-        System.out.println("Provided password: " + password);
-
-        if (!expectedPassword.equals(password)) {
-            System.out.println("Invalid password format. Expected: " + expectedPassword);
-            return false;
-        }
-
-        // Check if user already exists
         User existing = userDAO.findByUsername(employeeId);
-        if (existing != null) {
-            System.out.println("User already exists for this employee");
-            return false;
-        }
+        if (existing != null) return false;
 
-        // Create new user
         User newUser = new User();
         newUser.setUsername(employeeId);
         newUser.setPassword(password);
@@ -117,13 +71,10 @@ public class UserService {
 
         boolean added = userDAO.addUser(newUser);
         if (added) {
-            System.out.println("User auto-created for employee: " + employeeId);
-            System.out.println("User saved with role: " + newUser.getRole());
             currentUser = newUser;
-            return true;
+            LOGGER.info("Auto-created user for employee: " + employeeId);
         }
-
-        return false;
+        return added;
     }
 
     private void createDefaultAdminIfNeeded() {
@@ -133,11 +84,8 @@ public class UserService {
             admin.setPassword("admin123");
             admin.setActive(true);
             admin.setRole(User.Role.ADMIN);
-
-            boolean added = userDAO.addUser(admin);
-            if (added) {
-                System.out.println("Default admin user created with role: ADMIN");
-            }
+            userDAO.addUser(admin);
+            LOGGER.info("Default admin user created");
         }
     }
 
@@ -145,54 +93,86 @@ public class UserService {
         currentUser = null;
     }
 
-    public User getCurrentUser() {
-        // Ensure current user has employee object
-        if (currentUser != null && currentUser.getEmployee() == null) {
-            System.out.println("Current user has no employee, attempting to reload...");
-            Employee emp = employeeDAO.findByEmployeeId(currentUser.getUsername());
-            if (emp != null) {
-                currentUser.setEmployee(emp);
-                System.out.println("Reloaded employee: " + emp.getFullName());
+    public boolean changePassword(User user, String newPassword) {
+        if (user == null || newPassword == null || newPassword.trim().isEmpty()) return false;
+
+        // No strength validation here — this overload is for system/admin resets
+        // where the password format is controlled (e.g. forgot password reset)
+        user.setPassword(newPassword);
+        boolean updated = userDAO.updateUser(user);
+        if (updated) LOGGER.info("Password reset by admin for user: " + user.getUsername());
+        return updated;
+    }
+
+    public boolean changePassword(String username, String oldPassword, String newPassword) {
+        if (username == null || oldPassword == null || newPassword == null) return false;
+
+        User user = userDAO.findByUsername(username);
+        if (user == null) return false;
+
+        // Verify old password matches
+        if (!user.getPassword().equals(oldPassword)) {
+            LOGGER.warning("Incorrect old password for user: " + username);
+            return false;
+        }
+
+        // New password must be different from current
+        if (oldPassword.equals(newPassword)) {
+            LOGGER.warning("New password same as old for user: " + username);
+            return false;
+        }
+
+        ValidationService.ValidationResult result = validator.validatePassword(newPassword);
+        if (!result.isValid()) {
+            LOGGER.warning("Password validation failed for user: " + username
+                    + " — " + result.getErrorMessage());
+            return false;
+        }
+
+        user.setPassword(newPassword);
+        boolean updated = userDAO.updateUser(user);
+
+        if (updated) {
+            // Keep the in-memory currentUser in sync if it's the same user
+            if (currentUser != null && currentUser.getUsername().equals(username)) {
+                currentUser.setPassword(newPassword);
             }
+            LOGGER.info("Password changed successfully for user: " + username);
+        }
+        return updated;
+    }
+
+    // ========== GETTERS / SESSION ==========
+
+    public User getCurrentUser() {
+        if (currentUser != null && currentUser.getEmployee() == null) {
+            Employee emp = employeeDAO.findByEmployeeId(currentUser.getUsername());
+            if (emp != null) currentUser.setEmployee(emp);
         }
         return currentUser;
     }
 
-    public boolean isLoggedIn() {
-        return currentUser != null;
-    }
+    public boolean isLoggedIn() { return currentUser != null; }
 
     public boolean hasAccess(String feature) {
         if (currentUser == null) return false;
-        boolean access = currentUser.canAccess(feature);
-        System.out.println("User " + currentUser.getUsername() + " (role: " + currentUser.getRole() +
-                ") access to " + feature + ": " + access);
-        return access;
+        return currentUser.canAccess(feature);
     }
 
-    public List<User> getAllUsers() {
-        return userDAO.getAllUsers();
-    }
+    public List<User> getAllUsers() { return userDAO.getAllUsers(); }
 
     public boolean addUser(User user) {
-        if (user.getRole() == null && user.getEmployee() != null) {
+        if (user.getRole() == null && user.getEmployee() != null)
             user.setRole(user.determineRoleFromEmployee(user.getEmployee()));
-        }
         return userDAO.addUser(user);
     }
 
     public boolean updateUser(User user) {
-        if (user.getRole() == null && user.getEmployee() != null) {
+        if (user.getRole() == null && user.getEmployee() != null)
             user.setRole(user.determineRoleFromEmployee(user.getEmployee()));
-        }
         return userDAO.updateUser(user);
     }
 
-    public User getUserByUsername(String username) {
-        return userDAO.findByUsername(username);
-    }
-
-    public User getUserByEmployeeId(String employeeId) {
-        return userDAO.findByEmployeeId(employeeId);
-    }
+    public User getUserByUsername(String username) { return userDAO.findByUsername(username); }
+    public User getUserByEmployeeId(String employeeId) { return userDAO.findByEmployeeId(employeeId); }
 }
