@@ -130,7 +130,6 @@ public class LoginPanel extends JPanel {
         forgotLink.setForeground(UITheme.ACCENT_DARK);
         forgotLink.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // Underline on hover
         forgotLink.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -200,7 +199,7 @@ public class LoginPanel extends JPanel {
 
         String employeeId = idField.getText().trim();
 
-        // Step 2 — validate the ID format
+
         if (employeeId.isEmpty()) {
             JOptionPane.showMessageDialog(this,
                     "Employee ID is required.",
@@ -215,7 +214,7 @@ public class LoginPanel extends JPanel {
             return;
         }
 
-        // Step 3 — look up user and reset via UserService (uses Overload 1: changePassword(User, newPassword))
+
         model.User user = controller.getUserService().getUserByUsername(employeeId);
 
         if (user == null) {
@@ -226,10 +225,10 @@ public class LoginPanel extends JPanel {
             return;
         }
 
-        // Reset password to: "emp" + last 2 digits of employee ID (e.g. emp09) — satisfies 6-char minimum
+
         String resetPassword = "emp" + employeeId.substring(employeeId.length() - 2);
 
-        // Calls Overload 1 — changePassword(User user, String newPassword)
+
         boolean success = controller.getUserService().changePassword(user, resetPassword);
 
         if (success) {
@@ -239,7 +238,6 @@ public class LoginPanel extends JPanel {
                             + "Please log in and change it immediately.</html>",
                     "Password Reset Successful", JOptionPane.INFORMATION_MESSAGE);
 
-            // Pre-fill the employee ID field for convenience
             usernameField.setText(employeeId);
             passwordField.setText("");
             passwordField.requestFocus();

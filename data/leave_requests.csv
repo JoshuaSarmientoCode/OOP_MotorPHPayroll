@@ -1,2 +1,5 @@
 Request ID,Employee ID,Employee Name,Department,Position,Start Date,End Date,Leave Type,Reason,Status,Approved By,Request Date,Approval Date,Remarks
 LV1001,10001,Manuel III Garcia,EXECUTIVE,Chief Executive Officer,2026-03-09,2026-03-10,SICK LEAVE,"asdasddddsdasd",APPROVED,Manuel III Garcia,2026-03-09,2026-03-09,"aaa"
+LV1002,10013,Martha Farala,OPERATIONS,Payroll Rank and File,2026-03-10,2026-03-11,SICK LEAVE,"dddddaewqrfg",REJECTED,Andrea Mae Villanueva,2026-03-10,2026-03-10,"dfff"
+LV1003,10034,Beatriz SANTOS,,Customer Service and Relations,2026-03-10,2026-03-11,SICK LEAVE,"asdasdasdddd",PENDING,,2026-03-10,,
+LV1004,10006,Andrea Mae Villanueva,HUMAN RESOURCES,HR Manager,2026-03-10,2026-03-13,SICK LEAVE,"ikgjnolbjkopskof",APPROVED,Andrea Mae Villanueva,2026-03-10,2026-03-10,"dsdddsd"

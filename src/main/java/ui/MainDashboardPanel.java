@@ -11,6 +11,7 @@ import java.awt.event.*;
 import java.time.*;
 import java.time.format.*;
 import java.util.*;
+import java.util.List;
 
 public class MainDashboardPanel extends JPanel {
 
@@ -83,12 +84,21 @@ public class MainDashboardPanel extends JPanel {
         sidebar.add(createNavBtn("SUBMIT TICKET",    e -> controller.showSubmitTicket()));
         sidebar.add(createNavBtn("CHANGE PASSWORD",  e -> controller.showChangePasswordDialog()));
 
-        // ===== ADMINISTRATION (Admin / HR) =====
+        // ===== ADMINISTRATION (Admin only for payroll; Admin + HR for employee/leave mgmt) =====
         if (currentEmployee instanceof AdminEmployee || currentEmployee instanceof HREmployee) {
             sidebar.add(Box.createRigidArea(new Dimension(0, 15)));
             addSectionLabel(sidebar, "ADMINISTRATION");
             sidebar.add(createNavBtn("EMPLOYEE MANAGEMENT", e -> controller.showEmployeeManagement()));
             sidebar.add(createNavBtn("LEAVE APPROVALS",     e -> controller.showLeaveApprovals()));
+        }
+
+        // Payroll Processing — Admin and Finance only
+        if (currentEmployee instanceof AdminEmployee || currentEmployee instanceof FinanceEmployee) {
+            if (!(currentEmployee instanceof AdminEmployee || currentEmployee instanceof HREmployee)) {
+                // Finance-only: add section header if not already added
+                sidebar.add(Box.createRigidArea(new Dimension(0, 15)));
+                addSectionLabel(sidebar, "ADMINISTRATION");
+            }
             sidebar.add(createNavBtn("PAYROLL PROCESSING",  e -> controller.showPayrollProcessing()));
         }
 
@@ -186,7 +196,7 @@ public class MainDashboardPanel extends JPanel {
         JPanel metrics = new JPanel(new GridLayout(1, 2, 20, 0));
         metrics.setOpaque(false);
         metrics.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
-        metrics.add(UITheme.createMetricCard("CURRENT STATUS", getDetailedStatus()));
+        metrics.add(UITheme.createMetricCard("SALARY STATUS", getSalaryStatus()));
         metrics.add(UITheme.createMetricCard("TOTAL HOURS",
                 String.format("%.1f Hours Logged", calculateMonthlyHours())));
 
@@ -335,13 +345,12 @@ public class MainDashboardPanel extends JPanel {
         contentLayout.show(contentArea, "DASHBOARD");
     }
 
-    private String getDetailedStatus() {
+    private int calculateDaysPresent() {
         try {
-            Attendance today = attendanceService.getTodayAttendance(currentUser.getEmployeeId());
-            if (today == null) return "READY TO IN";
-            if (today.getTimeOut() == null) return "LOGGED IN";
-            return "FINISHED";
-        } catch (Exception e) { return "ERROR"; }
+            return attendanceService.getAttendanceForMonth(
+                    currentUser.getEmployeeId(),
+                    YearMonth.now()).size();
+        } catch (Exception e) { return 0; }
     }
 
     private double calculateMonthlyHours() {
@@ -351,6 +360,33 @@ public class MainDashboardPanel extends JPanel {
                     YearMonth.now().atDay(1),
                     YearMonth.now().atEndOfMonth());
         } catch (Exception e) { return 0.0; }
+    }
+
+    /**
+     * Shows salary readiness for the current month.
+     * - If payroll is processed → shows net pay
+     * - If not yet processed → "Pending"
+     */
+    private String getSalaryStatus() {
+        try {
+            YearMonth currentMonth = YearMonth.now();
+            boolean payrollReady = payrollService.hasPayroll(
+                    currentUser.getEmployeeId(), currentMonth);
+
+            if (payrollReady) {
+                List<Payslip> payslips = payrollService.getEmployeePayslips(
+                        currentUser.getEmployeeId());
+                if (!payslips.isEmpty() && payslips.get(0).getPeriod().equals(currentMonth)) {
+                    return String.format("Ready — ₱%,.0f Net", payslips.get(0).getNetPay());
+                }
+                return "Salary Ready!";
+            }
+
+            return "Pending";
+
+        } catch (Exception e) {
+            return "—";
+        }
     }
 
     private String truncate(String text, int maxLength) {

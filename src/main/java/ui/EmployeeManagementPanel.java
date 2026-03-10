@@ -48,13 +48,8 @@ public class EmployeeManagementPanel extends JPanel {
         setBackground(UITheme.BG_PRIMARY);
         setBorder(UITheme.PANEL_PADDING);
 
-        // Header
         add(createHeaderPanel(), BorderLayout.NORTH);
-
-        // Table
-        add(createTablePanel(), BorderLayout.CENTER);
-
-        // Bottom panel
+        add(createTablePanel(),  BorderLayout.CENTER);
         add(createBottomPanel(), BorderLayout.SOUTH);
     }
 
@@ -63,7 +58,6 @@ public class EmployeeManagementPanel extends JPanel {
         headerPanel.setOpaque(false);
         headerPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
 
-        // Left side with back button and title
         JPanel leftHeader = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         leftHeader.setOpaque(false);
 
@@ -79,7 +73,6 @@ public class EmployeeManagementPanel extends JPanel {
 
         headerPanel.add(leftHeader, BorderLayout.WEST);
 
-        // Right side with toolbar
         JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         toolbar.setOpaque(false);
 
@@ -109,7 +102,6 @@ public class EmployeeManagementPanel extends JPanel {
         }
 
         headerPanel.add(toolbar, BorderLayout.EAST);
-
         return headerPanel;
     }
 
@@ -124,7 +116,7 @@ public class EmployeeManagementPanel extends JPanel {
 
             @Override
             public Class<?> getColumnClass(int columnIndex) {
-                if (columnIndex == 6) return String.class; // Salary column
+                if (columnIndex == 6) return String.class;
                 return super.getColumnClass(columnIndex);
             }
         };
@@ -144,12 +136,12 @@ public class EmployeeManagementPanel extends JPanel {
         header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, UITheme.BORDER_COLOR));
         header.setPreferredSize(new Dimension(header.getWidth(), 40));
 
-        // Right align salary
+        // Right-align salary column
         DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
         rightRenderer.setHorizontalAlignment(SwingConstants.RIGHT);
         employeeTable.getColumnModel().getColumn(6).setCellRenderer(rightRenderer);
 
-        // Double click to view details
+        // Double-click to view
         employeeTable.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2) viewEmployeeDetails();
@@ -161,7 +153,6 @@ public class EmployeeManagementPanel extends JPanel {
         scrollPane.getViewport().setBackground(UITheme.CARD_BG);
 
         panel.add(scrollPane, BorderLayout.CENTER);
-
         return panel;
     }
 
@@ -193,7 +184,6 @@ public class EmployeeManagementPanel extends JPanel {
         }
 
         bottomPanel.add(actionPanel, BorderLayout.EAST);
-
         return bottomPanel;
     }
 
@@ -202,14 +192,6 @@ public class EmployeeManagementPanel extends JPanel {
             allEmployees = employeeService.getAllEmployees();
             updateTableData(allEmployees);
             statusLabel.setText(allEmployees.size() + " EMPLOYEES FOUND");
-
-            // Debug: Print first employee's salary
-            if (!allEmployees.isEmpty()) {
-                Employee first = allEmployees.get(0);
-                System.out.println("First employee salary: " + first.getBasicSalary());
-                System.out.println("Formatted: " + formatSalary(first.getBasicSalary()));
-            }
-
         } catch (Exception e) {
             statusLabel.setText("ERROR LOADING DATA");
             controller.showError("Failed to load employee data");
@@ -217,35 +199,30 @@ public class EmployeeManagementPanel extends JPanel {
     }
 
     private void updateTableData(List<Employee> employees) {
+        // Clear selection FIRST to prevent stale row index from causing display bugs
+        employeeTable.clearSelection();
         tableModel.setRowCount(0);
 
         for (Employee emp : employees) {
-            String salaryStr = formatSalary(emp.getBasicSalary());
-
             tableModel.addRow(new Object[]{
                     emp.getEmployeeId(),
                     emp.getLastName(),
                     emp.getFirstName(),
-                    emp.getPosition() != null ? emp.getPosition() : "—",
-                    emp.getStatus() != null ? emp.getStatus().getDisplayName() : "—",
+                    emp.getPosition()  != null ? emp.getPosition()                 : "—",
+                    emp.getStatus()    != null ? emp.getStatus().getDisplayName()  : "—",
                     emp.getDepartment(),
-                    salaryStr
+                    formatSalary(emp.getBasicSalary())
             });
         }
     }
 
-    /**
-     * Format salary with peso sign and commas
-     */
     private String formatSalary(double salary) {
         return String.format("₱ %,.2f", salary);
     }
 
     private void viewEmployeeDetails() {
         Employee emp = getSelectedEmployee();
-        if (emp != null) {
-            controller.showEmployeeDetails(emp);
-        }
+        if (emp != null) controller.showEmployeeDetails(emp);
     }
 
     private void addEmployee() {
@@ -254,23 +231,23 @@ public class EmployeeManagementPanel extends JPanel {
 
     private void editEmployee() {
         Employee emp = getSelectedEmployee();
-        if (emp != null) {
-            controller.showEmployeeDialog(emp, "EDIT EMPLOYEE");
-        }
+        if (emp != null) controller.showEmployeeDialog(emp, "EDIT EMPLOYEE");
     }
 
     private void deleteEmployee() {
         Employee emp = getSelectedEmployee();
         if (emp == null) return;
 
-        String message = String.format("Delete employee %s, %s %s?",
-                emp.getEmployeeId(), emp.getLastName(), emp.getFirstName());
+        String message = String.format("Delete employee %s — %s %s?\nThis cannot be undone.",
+                emp.getEmployeeId(), emp.getFirstName(), emp.getLastName());
 
         if (controller.showConfirm(message, "CONFIRM DELETE")) {
             try {
                 if (employeeService.deleteEmployee(emp.getEmployeeId())) {
+                    // Clear selection before reloading so no stale index is held
+                    employeeTable.clearSelection();
                     refreshData();
-                    controller.showInfo("Employee deleted successfully");
+                    controller.showInfo("Employee deleted successfully.");
                 }
             } catch (Exception e) {
                 controller.showError("Failed to delete employee: " + e.getMessage());
@@ -320,7 +297,9 @@ public class EmployeeManagementPanel extends JPanel {
             return null;
         }
 
-        String id = (String) tableModel.getValueAt(row, 0);
+        // Convert view row to model row in case table is sorted
+        int modelRow = employeeTable.convertRowIndexToModel(row);
+        String id = (String) tableModel.getValueAt(modelRow, 0);
         return employeeService.getEmployeeById(id);
     }
 

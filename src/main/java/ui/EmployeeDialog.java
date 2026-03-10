@@ -700,7 +700,7 @@ public class EmployeeDialog extends JDialog {
 
         // Set basic info
         emp.setEmployeeId(empIdField.getText().trim());
-        emp.setLastName(lastNameField.getText().trim().toUpperCase());
+        emp.setLastName(toTitleCase(lastNameField.getText().trim()));
         emp.setFirstName(firstNameField.getText().trim());
         emp.setAddress(addressArea.getText().trim());
         emp.setPhoneNumber(phoneField.getText().trim());
@@ -782,31 +782,40 @@ public class EmployeeDialog extends JDialog {
     }
 
     private Employee createEmployeeByDepartment(String department) {
-        System.out.println("Creating employee with department: " + department);
-
-        // Create based on department
         if (department != null) {
             switch (department) {
-                case "ADMINISTRATION":
-                    System.out.println("-> Creating AdminEmployee from department");
-                    return new AdminEmployee();
-                case "HUMAN RESOURCES":
-                    System.out.println("-> Creating HREmployee from department");
-                    return new HREmployee();
-                case "INFORMATION TECHNOLOGY":
-                    System.out.println("-> Creating ITEmployee from department");
-                    return new ITEmployee();
-                case "FINANCE":
-                    System.out.println("-> Creating FinanceEmployee from department");
-                    return new FinanceEmployee();
-                case "OPERATIONS":
-                    System.out.println("-> Creating RegularEmployee from department");
-                    return new RegularEmployee();
+                case "ADMINISTRATION":       return new AdminEmployee();
+                case "HUMAN RESOURCES":      return new HREmployee();
+                case "INFORMATION TECHNOLOGY": return new ITEmployee();
+                case "FINANCE":              return new FinanceEmployee();
+                default:                     return new RegularEmployee();
             }
         }
-
-        System.out.println("-> Creating RegularEmployee as default");
         return new RegularEmployee();
+    }
+
+    /**
+     * Converts a string to title case — first letter uppercase, rest lowercase.
+     * Handles hyphenated names like De La Cruz → De La Cruz
+     */
+    private String toTitleCase(String input) {
+        if (input == null || input.isEmpty()) return input;
+        String[] words = input.toLowerCase().split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (String word : words) {
+            if (word.isEmpty()) continue;
+            if (sb.length() > 0) sb.append(" ");
+            // Handle hyphenated parts (e.g. Santos-Reyes)
+            String[] parts = word.split("-");
+            for (int i = 0; i < parts.length; i++) {
+                if (i > 0) sb.append("-");
+                if (!parts[i].isEmpty()) {
+                    sb.append(Character.toUpperCase(parts[i].charAt(0)));
+                    if (parts[i].length() > 1) sb.append(parts[i].substring(1));
+                }
+            }
+        }
+        return sb.toString();
     }
 
     private String generateEmail(String firstName, String lastName) {
