@@ -32,6 +32,9 @@ public class EmployeeService {
     }
 
     public boolean addEmployee(Employee employee) {
+        // Feed current employee list into validator for duplicate checking
+        validator.setExistingEmployees(employeeDAO.getAllEmployees());
+
         ValidationService.ValidationResult result = validator.validateEmployee(employee);
         if (!result.isValid()) {
             throw new IllegalArgumentException(result.getErrorMessage());
@@ -40,7 +43,10 @@ public class EmployeeService {
     }
 
     public boolean updateEmployee(Employee employee) {
-        ValidationService.ValidationResult result = validator.validateEmployee(employee);
+        // Feed current employee list into validator for duplicate checking (excludes self)
+        validator.setExistingEmployees(employeeDAO.getAllEmployees());
+
+        ValidationService.ValidationResult result = validator.validateEmployeeForUpdate(employee);
         if (!result.isValid()) {
             throw new IllegalArgumentException(result.getErrorMessage());
         }

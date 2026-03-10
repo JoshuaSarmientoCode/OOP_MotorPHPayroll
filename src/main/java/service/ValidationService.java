@@ -13,7 +13,14 @@ public class ValidationService {
 
     private static final Logger LOGGER = Logger.getLogger(ValidationService.class.getName());
 
-    // ========== VALIDATION PATTERNS ==========
+    // Employee list for duplicate checks
+    private List<Employee> existingEmployees = new ArrayList<>();
+
+    public void setExistingEmployees(List<Employee> employees) {
+        this.existingEmployees = employees != null ? employees : new ArrayList<>();
+    }
+
+    // ========== PATTERNS ==========
 
     private static final Pattern EMAIL_PATTERN =
             Pattern.compile("^[A-Za-z0-9+_.-]+@([A-Za-z0-9-]+\\.)+[A-Za-z]{2,6}$");
@@ -36,7 +43,7 @@ public class ValidationService {
     private static final Pattern EMPLOYEE_ID_PATTERN =
             Pattern.compile("^\\d{5}$");
 
-    // ========== VALIDATION RESULT CLASS ==========
+    // ========== VALIDATION RESULT ==========
 
     public static class ValidationResult {
         private boolean valid;
@@ -68,6 +75,7 @@ public class ValidationService {
             return String.join("\n", errors);
         }
 
+        // Combines another result into this one
         public void merge(ValidationResult other) {
             if (!other.isValid()) {
                 this.valid = false;
@@ -79,7 +87,22 @@ public class ValidationService {
 
     // ========== EMPLOYEE VALIDATION ==========
 
+    // Add — includes duplicate check
     public ValidationResult validateEmployee(Employee emp) {
+        ValidationResult result = validateEmployeeFields(emp);
+        result.merge(validateNoDuplicates(emp));
+        return result;
+    }
+
+    // Update — duplicate check excludes own record
+    public ValidationResult validateEmployeeForUpdate(Employee emp) {
+        ValidationResult result = validateEmployeeFields(emp);
+        result.merge(validateNoDuplicatesOnUpdate(emp, emp.getEmployeeId()));
+        return result;
+    }
+
+    // Shared field checks for add and update
+    private ValidationResult validateEmployeeFields(Employee emp) {
         ValidationResult result = new ValidationResult();
 
         if (emp == null) {
@@ -93,7 +116,6 @@ public class ValidationService {
         result.merge(validateBirthDate(emp.getBirthDate()));
         result.merge(validateAddress(emp.getAddress()));
         result.merge(validatePhone(emp.getPhoneNumber()));
-        result.merge(validateEmail(emp.getEmail()));
         result.merge(validatePosition(emp.getPosition()));
         result.merge(validateSalary(emp.getBasicSalary()));
         result.merge(validateAllowances(emp));
@@ -110,6 +132,7 @@ public class ValidationService {
         return result;
     }
 
+    // 5-digit ID
     public ValidationResult validateEmployeeId(String employeeId) {
         ValidationResult result = new ValidationResult();
 
@@ -122,18 +145,19 @@ public class ValidationService {
         return result;
     }
 
+    // Accepts Filipino names: Jr., Sr., III, hyphens, apostrophes
     public ValidationResult validateName(String name, String fieldName) {
         ValidationResult result = new ValidationResult();
 
         if (isNullOrEmpty(name)) {
             result.addFieldError(fieldName.toLowerCase(), fieldName + " is required");
-        } else if (name.length() < 2) {
+        } else if (name.trim().length() < 2) {
             result.addFieldError(fieldName.toLowerCase(),
                     fieldName + " must be at least 2 characters");
         } else if (name.length() > 50) {
             result.addFieldError(fieldName.toLowerCase(),
                     fieldName + " cannot exceed 50 characters");
-        } else if (!name.matches("^[A-Za-z\\s-']+$")) {
+        } else if (!name.matches("^[A-Za-z0-9\\s\\-'.,]+$")) {
             result.addFieldError(fieldName.toLowerCase(),
                     fieldName + " contains invalid characters");
         }
@@ -141,6 +165,7 @@ public class ValidationService {
         return result;
     }
 
+    // Min 18, max 100 years old
     public ValidationResult validateBirthDate(LocalDate birthDate) {
         ValidationResult result = new ValidationResult();
 
@@ -149,10 +174,9 @@ public class ValidationService {
             return result;
         }
 
-        LocalDate now = LocalDate.now();
-        int age = Period.between(birthDate, now).getYears();
+        int age = Period.between(birthDate, LocalDate.now()).getYears();
 
-        if (birthDate.isAfter(now)) {
+        if (birthDate.isAfter(LocalDate.now())) {
             result.addFieldError("birthDate", "Birth date cannot be in the future");
         } else if (age < 18) {
             result.addFieldError("birthDate", "Employee must be at least 18 years old");
@@ -163,6 +187,7 @@ public class ValidationService {
         return result;
     }
 
+    // 5-200 characters
     public ValidationResult validateAddress(String address) {
         ValidationResult result = new ValidationResult();
 
@@ -177,6 +202,7 @@ public class ValidationService {
         return result;
     }
 
+    // 7-20 digits, allows dashes and spaces
     public ValidationResult validatePhone(String phone) {
         ValidationResult result = new ValidationResult();
 
@@ -211,18 +237,20 @@ public class ValidationService {
         return result;
     }
 
+    // P10,000 - P1,000,000
     public ValidationResult validateSalary(double salary) {
         ValidationResult result = new ValidationResult();
 
         if (salary < 10000) {
-            result.addFieldError("basicSalary", "Basic salary must be at least ₱10,000");
+            result.addFieldError("basicSalary", "Basic salary must be at least P10,000");
         } else if (salary > 1000000) {
-            result.addFieldError("basicSalary", "Basic salary cannot exceed ₱1,000,000");
+            result.addFieldError("basicSalary", "Basic salary cannot exceed P1,000,000");
         }
 
         return result;
     }
 
+    // No negatives; total must not exceed basic salary
     public ValidationResult validateAllowances(Employee emp) {
         ValidationResult result = new ValidationResult();
 
@@ -232,59 +260,109 @@ public class ValidationService {
             result.addFieldError("phoneAllowance", "Phone allowance cannot be negative");
         if (emp.getClothingAllowance() < 0)
             result.addFieldError("clothingAllowance", "Clothing allowance cannot be negative");
-
-        double totalAllowances = emp.getTotalAllowances();
-        if (totalAllowances > emp.getBasicSalary()) {
+        if (emp.getTotalAllowances() > emp.getBasicSalary())
             result.addFieldError("allowances", "Total allowances cannot exceed basic salary");
-        }
 
         return result;
     }
 
+    // Accepts with or without dashes
     public ValidationResult validateGovernmentIds(GovernmentIds gov) {
         ValidationResult result = new ValidationResult();
 
         if (!isNullOrEmpty(gov.getSssNumber())) {
             String clean = gov.getSssNumber().replace("-", "");
-            if (!SSS_PATTERN.matcher(gov.getSssNumber()).matches() &&
-                    !clean.matches("\\d{10}")) {
-                result.addFieldError("sss",
-                        "Invalid SSS format (should be 10 digits or XX-XXXXXXX-X)");
-            }
+            if (!SSS_PATTERN.matcher(gov.getSssNumber()).matches() && !clean.matches("\\d{10}"))
+                result.addFieldError("sss", "Invalid SSS format (XX-XXXXXXX-X or 10 digits)");
         }
 
         if (!isNullOrEmpty(gov.getTinNumber())) {
             String clean = gov.getTinNumber().replace("-", "");
-            if (!TIN_PATTERN.matcher(gov.getTinNumber()).matches() &&
-                    !clean.matches("\\d{12}")) {
-                result.addFieldError("tin",
-                        "Invalid TIN format (should be 12 digits or XXX-XXX-XXX-XXX)");
-            }
+            if (!TIN_PATTERN.matcher(gov.getTinNumber()).matches() && !clean.matches("\\d{12}"))
+                result.addFieldError("tin", "Invalid TIN format (XXX-XXX-XXX-XXX or 12 digits)");
         }
 
         if (!isNullOrEmpty(gov.getPhilHealthNumber())) {
             String clean = gov.getPhilHealthNumber().replace("-", "");
-            if (!PHILHEALTH_PATTERN.matcher(gov.getPhilHealthNumber()).matches() &&
-                    !clean.matches("\\d{12}")) {
-                result.addFieldError("philHealth",
-                        "Invalid PhilHealth format (should be 12 digits or XX-XXXXXXXXX-X)");
-            }
+            if (!PHILHEALTH_PATTERN.matcher(gov.getPhilHealthNumber()).matches() && !clean.matches("\\d{12}"))
+                result.addFieldError("philHealth", "Invalid PhilHealth format (XX-XXXXXXXXX-X or 12 digits)");
         }
 
         if (!isNullOrEmpty(gov.getPagIbigNumber())) {
             String clean = gov.getPagIbigNumber().replace("-", "");
-            if (!PAGIBIG_PATTERN.matcher(gov.getPagIbigNumber()).matches() &&
-                    !clean.matches("\\d{12}")) {
-                result.addFieldError("pagIbig",
-                        "Invalid Pag-IBIG format (should be 12 digits or XXXX-XXXX-XXXX)");
+            if (!PAGIBIG_PATTERN.matcher(gov.getPagIbigNumber()).matches() && !clean.matches("\\d{12}"))
+                result.addFieldError("pagIbig", "Invalid Pag-IBIG format (XXXX-XXXX-XXXX or 12 digits)");
+        }
+
+        return result;
+    }
+
+    // ========== DUPLICATE VALIDATION ==========
+
+    // New employee — checks all unique fields
+    public ValidationResult validateNoDuplicates(Employee emp) {
+        return checkDuplicates(emp, null);
+    }
+
+    // Existing employee — skips own record
+    public ValidationResult validateNoDuplicatesOnUpdate(Employee emp, String currentId) {
+        return checkDuplicates(emp, currentId);
+    }
+
+    // excludeId = null on add, own ID on update
+    private ValidationResult checkDuplicates(Employee emp, String excludeId) {
+        ValidationResult result = new ValidationResult();
+        if (emp == null || existingEmployees.isEmpty()) return result;
+
+        for (Employee existing : existingEmployees) {
+            if (excludeId != null && excludeId.equals(existing.getEmployeeId())) continue;
+
+            if (!isNullOrEmpty(emp.getEmployeeId()) &&
+                    emp.getEmployeeId().equals(existing.getEmployeeId())) {
+                result.addFieldError("employeeId",
+                        "Employee ID " + emp.getEmployeeId() + " is already taken");
+            }
+
+            if (!isNullOrEmpty(emp.getFirstName()) && !isNullOrEmpty(emp.getLastName()) &&
+                    emp.getLastName().equalsIgnoreCase(existing.getLastName()) &&
+                    emp.getFirstName().equalsIgnoreCase(existing.getFirstName())) {
+                result.addFieldError("name",
+                        emp.getFirstName() + " " + emp.getLastName()
+                                + " already exists (ID: " + existing.getEmployeeId() + ")");
+            }
+
+            if (!isNullOrEmpty(emp.getPhoneNumber()) &&
+                    emp.getPhoneNumber().replaceAll("\\s", "").equals(
+                            existing.getPhoneNumber() != null
+                                    ? existing.getPhoneNumber().replaceAll("\\s", "") : "")) {
+                result.addFieldError("phoneNumber",
+                        "Phone number already registered to another employee");
+            }
+
+            if (emp.getGovernmentIds() != null && existing.getGovernmentIds() != null) {
+                GovernmentIds n = emp.getGovernmentIds();
+                GovernmentIds o = existing.getGovernmentIds();
+
+                if (!isNullOrEmpty(n.getSssNumber()) && n.getSssNumber().equals(o.getSssNumber()))
+                    result.addFieldError("sss", "SSS number already registered to another employee");
+
+                if (!isNullOrEmpty(n.getTinNumber()) && n.getTinNumber().equals(o.getTinNumber()))
+                    result.addFieldError("tin", "TIN number already registered to another employee");
+
+                if (!isNullOrEmpty(n.getPhilHealthNumber()) && n.getPhilHealthNumber().equals(o.getPhilHealthNumber()))
+                    result.addFieldError("philHealth", "PhilHealth number already registered to another employee");
+
+                if (!isNullOrEmpty(n.getPagIbigNumber()) && n.getPagIbigNumber().equals(o.getPagIbigNumber()))
+                    result.addFieldError("pagIbig", "Pag-IBIG number already registered to another employee");
             }
         }
 
         return result;
     }
 
-    // ========== LEAVE REQUEST VALIDATION ==========
+    // ========== LEAVE VALIDATION ==========
 
+    // Checks dates, duration, type, reason, and leave credits
     public ValidationResult validateLeaveRequest(LeaveRequest request, Employee employee) {
         ValidationResult result = new ValidationResult();
 
@@ -306,16 +384,13 @@ public class ValidationService {
             result.addFieldError("endDate", "End date must be after start date");
         }
 
-        if (request.getStartDate() != null && request.getEndDate() != null) {
-            int days = request.getNumberOfDays();
-            if (days > 30) {
-                result.addFieldError("dates", "Leave request cannot exceed 30 days");
-            }
+        if (request.getStartDate() != null && request.getEndDate() != null &&
+                request.getNumberOfDays() > 30) {
+            result.addFieldError("dates", "Leave request cannot exceed 30 days");
         }
 
-        if (isNullOrEmpty(request.getLeaveType())) {
+        if (isNullOrEmpty(request.getLeaveType()))
             result.addFieldError("leaveType", "Leave type is required");
-        }
 
         if (isNullOrEmpty(request.getReason())) {
             result.addFieldError("reason", "Reason is required");
@@ -323,6 +398,7 @@ public class ValidationService {
             result.addFieldError("reason", "Please provide a more detailed reason");
         }
 
+        // Leave credits check for regular employees
         if (employee instanceof RegularEmployee && request.isPaidLeave()) {
             RegularEmployee reg = (RegularEmployee) employee;
             int days = request.getNumberOfDays();
@@ -349,9 +425,7 @@ public class ValidationService {
         boolean hasTimedIn = employee.getAttendanceRecords().stream()
                 .anyMatch(a -> a.getDate().equals(date) && a.getTimeIn() != null);
 
-        if (hasTimedIn) {
-            result.addError("Already timed in for today");
-        }
+        if (hasTimedIn) result.addError("Already timed in for today");
 
         return result;
     }
@@ -366,8 +440,7 @@ public class ValidationService {
 
         Attendance today = employee.getAttendanceRecords().stream()
                 .filter(a -> a.getDate().equals(date))
-                .findFirst()
-                .orElse(null);
+                .findFirst().orElse(null);
 
         if (today == null) {
             result.addError("No time in record for today");
@@ -383,9 +456,8 @@ public class ValidationService {
     public ValidationResult validateLogin(String username, String password) {
         ValidationResult result = new ValidationResult();
 
-        if (isNullOrEmpty(username)) {
+        if (isNullOrEmpty(username))
             result.addFieldError("username", "Username is required");
-        }
 
         if (isNullOrEmpty(password)) {
             result.addFieldError("password", "Password is required");
@@ -396,49 +468,13 @@ public class ValidationService {
         return result;
     }
 
-    // ========== PASSWORD VALIDATION ==========
-
-    /**
-     * Validate a new password for change password feature.
-     * Requires min 6 characters, at least one letter and one digit.
-     */
-    public ValidationResult validatePassword(String password) {
-        ValidationResult result = new ValidationResult();
-
-        if (isNullOrEmpty(password)) {
-            result.addFieldError("password", "Password is required");
-            return result;
-        }
-
-        if (password.length() < 5) {
-            result.addFieldError("password", "Password must be at least 5 characters");
-            return result;
-        }
-
-        if (password.length() > 50) {
-            result.addFieldError("password", "Password must not exceed 50 characters");
-            return result;
-        }
-
-        boolean hasLetter = password.chars().anyMatch(Character::isLetter);
-        boolean hasDigit  = password.chars().anyMatch(Character::isDigit);
-
-        if (!hasLetter || !hasDigit) {
-            result.addFieldError("password",
-                    "Password must contain at least one letter and one number");
-        }
-
-        return result;
-    }
-
     // ========== PAYROLL VALIDATION ==========
 
+    // Cannot generate for future periods
     public ValidationResult validatePayrollGeneration(Employee employee, YearMonth period) {
         ValidationResult result = new ValidationResult();
 
-        if (employee == null) {
-            result.addError("Employee not found");
-        }
+        if (employee == null) result.addError("Employee not found");
 
         if (period == null) {
             result.addError("Payroll period is required");
@@ -449,39 +485,30 @@ public class ValidationService {
         return result;
     }
 
-    // ========== HELPER METHODS ==========
+    // ========== HELPERS ==========
 
     private boolean isNullOrEmpty(String str) {
         return str == null || str.trim().isEmpty();
     }
 
+    // Start before end; max 1 year range
     public ValidationResult validateDateRange(LocalDate start, LocalDate end) {
         ValidationResult result = new ValidationResult();
 
-        if (start == null) {
-            result.addFieldError("startDate", "Start date is required");
-        }
-
-        if (end == null) {
-            result.addFieldError("endDate", "End date is required");
-        }
+        if (start == null) result.addFieldError("startDate", "Start date is required");
+        if (end == null)   result.addFieldError("endDate", "End date is required");
 
         if (start != null && end != null) {
-            if (end.isBefore(start)) {
+            if (end.isBefore(start))
                 result.addFieldError("dateRange", "End date must be after start date");
-            }
-
-            long days = ChronoUnit.DAYS.between(start, end);
-            if (days > 365) {
+            if (ChronoUnit.DAYS.between(start, end) > 365)
                 result.addFieldError("dateRange", "Date range cannot exceed 1 year");
-            }
         }
 
         return result;
     }
 
-    public ValidationResult validateNumeric(String value, String fieldName,
-                                            double min, double max) {
+    public ValidationResult validateNumeric(String value, String fieldName, double min, double max) {
         ValidationResult result = new ValidationResult();
 
         if (isNullOrEmpty(value)) {
@@ -491,16 +518,29 @@ public class ValidationService {
 
         try {
             double num = Double.parseDouble(value.replace(",", "").trim());
-            if (num < min) {
-                result.addFieldError(fieldName.toLowerCase(),
-                        fieldName + " must be at least " + min);
-            } else if (num > max) {
-                result.addFieldError(fieldName.toLowerCase(),
-                        fieldName + " cannot exceed " + max);
-            }
+            if (num < min)
+                result.addFieldError(fieldName.toLowerCase(), fieldName + " must be at least " + min);
+            else if (num > max)
+                result.addFieldError(fieldName.toLowerCase(), fieldName + " cannot exceed " + max);
         } catch (NumberFormatException e) {
-            result.addFieldError(fieldName.toLowerCase(),
-                    fieldName + " must be a valid number");
+            result.addFieldError(fieldName.toLowerCase(), fieldName + " must be a valid number");
+        }
+
+        return result;
+    }
+
+    // Min 5 chars, must contain a letter and a digit
+    public ValidationResult validatePassword(String password) {
+        ValidationResult result = new ValidationResult();
+
+        if (isNullOrEmpty(password)) {
+            result.addFieldError("password", "Password is required");
+        } else if (password.length() < 5) {
+            result.addFieldError("password", "Password must be at least 5 characters");
+        } else if (password.length() > 50) {
+            result.addFieldError("password", "Password cannot exceed 50 characters");
+        } else if (!password.matches(".*[a-zA-Z].*") || !password.matches(".*[0-9].*")) {
+            result.addFieldError("password", "Password must contain at least one letter and one number");
         }
 
         return result;

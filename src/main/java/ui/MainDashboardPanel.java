@@ -178,14 +178,38 @@ public class MainDashboardPanel extends JPanel {
         panel.setBackground(UITheme.BG_PRIMARY);
         panel.setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
 
-        // Welcome header
-        JPanel header = new JPanel(new BorderLayout());
+        // User identity header
+        JPanel header = new JPanel();
+        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
         header.setOpaque(false);
-        header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
-        JLabel welcome = new JLabel("Welcome, " +
-                (currentEmployee != null ? currentEmployee.getFirstName() : "User"));
-        welcome.setFont(new Font("SansSerif", Font.BOLD, 22));
-        header.add(welcome, BorderLayout.WEST);
+        header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
+
+        String fullName = currentEmployee != null
+                ? currentEmployee.getFullName() : currentUser.getUsername();
+        String empId = currentEmployee != null
+                ? currentEmployee.getEmployeeId() : "—";
+        String department = currentEmployee != null && currentEmployee.getDepartment() != null
+                ? currentEmployee.getDepartment() : "—";
+        String position = currentEmployee != null && currentEmployee.getPosition() != null
+                ? currentEmployee.getPosition() : "—";
+
+        JLabel nameLabel = new JLabel(fullName);
+        nameLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
+        nameLabel.setForeground(UITheme.TEXT_PRIMARY);
+
+        JLabel idLabel = new JLabel("Employee No. " + empId);
+        idLabel.setFont(UITheme.NORMAL_FONT);
+        idLabel.setForeground(UITheme.TEXT_SECONDARY);
+
+        JLabel deptRoleLabel = new JLabel(department + "  ·  " + position);
+        deptRoleLabel.setFont(UITheme.NORMAL_FONT);
+        deptRoleLabel.setForeground(UITheme.TEXT_SECONDARY);
+
+        header.add(nameLabel);
+        header.add(Box.createRigidArea(new Dimension(0, 4)));
+        header.add(idLabel);
+        header.add(Box.createRigidArea(new Dimension(0, 2)));
+        header.add(deptRoleLabel);
 
         panel.add(header);
         panel.add(Box.createRigidArea(new Dimension(0, 25)));

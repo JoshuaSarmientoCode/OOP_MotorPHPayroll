@@ -10,6 +10,7 @@ import java.awt.event.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class EmployeeDialog extends JDialog {
@@ -222,9 +223,11 @@ public class EmployeeDialog extends JDialog {
         gbc.gridx = 1;
         phoneField = createTextField(20, true);
         phoneField.setEditable(true);
-        phoneField.addFocusListener(new ValidationFocusListener(f ->
-                validateField("phone", phoneField.getText(),
-                        validator.validatePhone(phoneField.getText()))));
+        phoneField.addFocusListener(new ValidationFocusListener(f -> {
+            validateField("phone", phoneField.getText(),
+                    validator.validatePhone(phoneField.getText()));
+            checkDuplicateOnBlur("phoneNumber", phoneField, "phone");
+        }));
         panel.add(phoneField, gbc);
         row++;
 
@@ -388,6 +391,7 @@ public class EmployeeDialog extends JDialog {
             gov.setSssNumber(sssField.getText().trim());
             validateField("sss", sssField.getText(),
                     validator.validateGovernmentIds(gov));
+            checkDuplicateOnBlur("sss", sssField, "sss");
         }));
         panel.add(sssField, gbc);
         row++;
@@ -404,6 +408,7 @@ public class EmployeeDialog extends JDialog {
             gov.setPhilHealthNumber(philHealthField.getText().trim());
             validateField("philHealth", philHealthField.getText(),
                     validator.validateGovernmentIds(gov));
+            checkDuplicateOnBlur("philHealth", philHealthField, "philHealth");
         }));
         panel.add(philHealthField, gbc);
         row++;
@@ -420,6 +425,7 @@ public class EmployeeDialog extends JDialog {
             gov.setTinNumber(tinField.getText().trim());
             validateField("tin", tinField.getText(),
                     validator.validateGovernmentIds(gov));
+            checkDuplicateOnBlur("tin", tinField, "tin");
         }));
         panel.add(tinField, gbc);
         row++;
@@ -436,6 +442,7 @@ public class EmployeeDialog extends JDialog {
             gov.setPagIbigNumber(pagIbigField.getText().trim());
             validateField("pagIbig", pagIbigField.getText(),
                     validator.validateGovernmentIds(gov));
+            checkDuplicateOnBlur("pagIbig", pagIbigField, "pagIbig");
         }));
         panel.add(pagIbigField, gbc);
 
@@ -829,6 +836,58 @@ public class EmployeeDialog extends JDialog {
 
     public boolean isSaved() {
         return saved;
+    }
+
+    // Checks for duplicate value on blur — shows inline error immediately
+    private void checkDuplicateOnBlur(String fieldKey, JTextField field, String fieldName) {
+        String value = field.getText().trim();
+        if (value.isEmpty()) return;
+
+        List<Employee> allEmployees = employeeService.getAllEmployees();
+        String currentId = employee != null ? employee.getEmployeeId() : null;
+
+        for (Employee existing : allEmployees) {
+            if (currentId != null && currentId.equals(existing.getEmployeeId())) continue;
+
+            boolean isDuplicate = false;
+            String message = "";
+
+            switch (fieldKey) {
+                case "phoneNumber":
+                    isDuplicate = value.replaceAll("\\s", "").equals(
+                            existing.getPhoneNumber() != null
+                                    ? existing.getPhoneNumber().replaceAll("\\s", "") : "");
+                    message = "Phone number already registered to another employee";
+                    break;
+                case "sss":
+                    isDuplicate = existing.getGovernmentIds() != null &&
+                            value.equals(existing.getGovernmentIds().getSssNumber());
+                    message = "SSS number already registered to another employee";
+                    break;
+                case "philHealth":
+                    isDuplicate = existing.getGovernmentIds() != null &&
+                            value.equals(existing.getGovernmentIds().getPhilHealthNumber());
+                    message = "PhilHealth number already registered to another employee";
+                    break;
+                case "tin":
+                    isDuplicate = existing.getGovernmentIds() != null &&
+                            value.equals(existing.getGovernmentIds().getTinNumber());
+                    message = "TIN number already registered to another employee";
+                    break;
+                case "pagIbig":
+                    isDuplicate = existing.getGovernmentIds() != null &&
+                            value.equals(existing.getGovernmentIds().getPagIbigNumber());
+                    message = "Pag-IBIG number already registered to another employee";
+                    break;
+            }
+
+            if (isDuplicate) {
+                setFieldError(field, message);
+                fieldValid.put(field, false);
+                updateSaveButtonState();
+                return;
+            }
+        }
     }
 
     // Inner class for validation focus listener
