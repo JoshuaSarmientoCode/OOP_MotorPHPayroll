@@ -598,7 +598,7 @@ public class EmployeeDialog extends JDialog {
         if (employee == null) return;
 
         empIdField.setText(employee.getEmployeeId());
-        lastNameField.setText(employee.getLastName());
+        lastNameField.setText(toTitleCase(employee.getLastName()));
         firstNameField.setText(employee.getFirstName());
         addressArea.setText(employee.getAddress());
 
@@ -700,7 +700,9 @@ public class EmployeeDialog extends JDialog {
 
         // Set basic info
         emp.setEmployeeId(empIdField.getText().trim());
-        emp.setLastName(toTitleCase(lastNameField.getText().trim()));
+        emp.setLastName(employee == null
+                ? toTitleCase(lastNameField.getText().trim())
+                : lastNameField.getText().trim());
         emp.setFirstName(firstNameField.getText().trim());
         emp.setAddress(addressArea.getText().trim());
         emp.setPhoneNumber(phoneField.getText().trim());
