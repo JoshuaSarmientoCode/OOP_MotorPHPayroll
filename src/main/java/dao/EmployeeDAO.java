@@ -26,7 +26,6 @@ public class EmployeeDAO extends BaseDAO<Employee> {
 
     @Override
     public Employee fromCSV(String csvLine) {
-        // Use a proper CSV parser that handles quoted fields with commas
         List<String> fields = parseCSVLineProperly(csvLine);
 
         if (fields.size() < 17) {
@@ -35,10 +34,8 @@ public class EmployeeDAO extends BaseDAO<Employee> {
         }
 
         try {
-            // Debug: Print field count
-            System.out.println("Parsing employee line with " + fields.size() + " fields");
+            LOGGER.fine("Parsing employee line with " + fields.size() + " fields");
 
-            // Extract fields by index - MATCHING YOUR CSV STRUCTURE
             String employeeId = fields.get(0).trim();           // Employee #
             String lastName = fields.get(1).trim();             // Last Name
             String firstName = fields.get(2).trim();            // First Name
@@ -53,25 +50,17 @@ public class EmployeeDAO extends BaseDAO<Employee> {
             String position = fields.get(11).trim();            // Position
             String supervisor = fields.get(12).trim();          // Immediate Supervisor
 
-            // Salary fields - THESE ARE THE ONLY ONES THAT SHOULD GO TO parseCurrency
             String basicSalaryStr = fields.size() > 13 ? fields.get(13).trim() : "0";
             String riceSubsidyStr = fields.size() > 14 ? fields.get(14).trim() : "0";
             String phoneAllowanceStr = fields.size() > 15 ? fields.get(15).trim() : "0";
             String clothingAllowanceStr = fields.size() > 16 ? fields.get(16).trim() : "0";
 
-            // These are calculated fields - we can ignore them when reading
-            // String grossSemiMonthlyStr = fields.size() > 17 ? fields.get(17).trim() : "0";
-            // String hourlyRateStr = fields.size() > 18 ? fields.get(18).trim() : "0";
-
-            // Create appropriate employee type based on position and status
             Employee emp = createEmployeeByPositionAndStatus(position, status);
 
-            // Set basic info
             emp.setEmployeeId(employeeId);
             emp.setLastName(lastName);
             emp.setFirstName(firstName);
 
-            // Birthday
             if (!birthday.isEmpty() && !birthday.equals("N/A")) {
                 try {
                     emp.setBirthDate(LocalDate.parse(birthday, DATE_FORMATTER));
@@ -80,16 +69,13 @@ public class EmployeeDAO extends BaseDAO<Employee> {
                 }
             }
 
-            // Address (remove quotes if present)
             if (address.startsWith("\"") && address.endsWith("\"")) {
                 address = address.substring(1, address.length() - 1);
             }
             emp.setAddress(address);
 
-            // Phone
             emp.setPhoneNumber(phoneNumber);
 
-            // Government IDs
             GovernmentIds govIds = new GovernmentIds();
             govIds.setSssNumber(sss);
             govIds.setPhilHealthNumber(philhealth);
@@ -97,17 +83,14 @@ public class EmployeeDAO extends BaseDAO<Employee> {
             govIds.setPagIbigNumber(pagibig);
             emp.setGovernmentIds(govIds);
 
-            // Status and Position
             emp.setStatus(status);
             emp.setPosition(position);
 
-            // Supervisor
             if (!supervisor.equals("N/A") && !supervisor.isEmpty()) {
                 emp.setImmediateSupervisor(supervisor);
             }
 
             // ========== SALARY FIELDS PARSING ==========
-            // Only parse these fields - they are the numeric ones
             if (!basicSalaryStr.isEmpty() && !basicSalaryStr.equals("N/A")) {
                 double basicSalary = parseCurrency(basicSalaryStr);
                 emp.setBasicSalary(basicSalary);
@@ -128,17 +111,15 @@ public class EmployeeDAO extends BaseDAO<Employee> {
                 emp.setClothingAllowance(clothingAllowance);
             }
 
-            // Generate email
             emp.setEmail(generateEmail(firstName, lastName));
 
-            // Set hire date
             if (emp.getBirthDate() != null) {
                 emp.setHireDate(emp.getBirthDate().plusYears(20));
             } else {
                 emp.setHireDate(LocalDate.now().minusYears(1));
             }
 
-            System.out.println("Successfully parsed employee: " + employeeId + " - " + firstName + " " + lastName);
+            LOGGER.fine("Successfully parsed employee: " + employeeId + " - " + firstName + " " + lastName);
             return emp;
 
         } catch (Exception e) {
@@ -152,65 +133,45 @@ public class EmployeeDAO extends BaseDAO<Employee> {
     public String toCSV(Employee emp) {
         List<String> fields = new ArrayList<>();
 
-        // Column 0: Employee #
         fields.add(emp.getEmployeeId());
 
-        // Column 1: Last Name
         fields.add(emp.getLastName());
 
-        // Column 2: First Name
         fields.add(emp.getFirstName());
 
-        // Column 3: Birthday
         fields.add(emp.getBirthDate() != null ? emp.getBirthDate().format(DATE_FORMATTER) : "");
 
-        // Column 4: Address (with quotes)
         fields.add("\"" + (emp.getAddress() != null ? emp.getAddress() : "") + "\"");
 
-        // Column 5: Phone Number
         fields.add(emp.getPhoneNumber() != null ? emp.getPhoneNumber() : "");
 
-        // Column 6: SSS #
         GovernmentIds gov = emp.getGovernmentIds();
         fields.add(gov != null && gov.getSssNumber() != null ? gov.getSssNumber() : "");
 
-        // Column 7: Philhealth #
         fields.add(gov != null && gov.getPhilHealthNumber() != null ? gov.getPhilHealthNumber() : "");
 
-        // Column 8: TIN #
         fields.add(gov != null && gov.getTinNumber() != null ? gov.getTinNumber() : "");
 
-        // Column 9: Pag-ibig #
         fields.add(gov != null && gov.getPagIbigNumber() != null ? gov.getPagIbigNumber() : "");
 
-        // Column 10: Status
         fields.add(emp.getStatus() != null ? emp.getStatus().toString() : "REGULAR");
 
-        // Column 11: Position
         fields.add(emp.getPosition() != null ? emp.getPosition() : "");
 
-        // Column 12: Immediate Supervisor
         fields.add(emp.getImmediateSupervisor() != null ? emp.getImmediateSupervisor() : "");
 
-        // Column 13: Basic Salary (with quotes and commas)
         fields.add("\"" + String.format("%,.0f", emp.getBasicSalary()) + "\"");
 
-        // Column 14: Rice Subsidy (with quotes and commas)
         fields.add("\"" + String.format("%,.0f", emp.getRiceSubsidy()) + "\"");
 
-        // Column 15: Phone Allowance (with quotes and commas)
         fields.add("\"" + String.format("%,.0f", emp.getPhoneAllowance()) + "\"");
 
-        // Column 16: Clothing Allowance (with quotes and commas)
         fields.add("\"" + String.format("%,.0f", emp.getClothingAllowance()) + "\"");
 
-        // Column 17: Gross Semi-monthly Rate (calculated, with quotes and commas)
         fields.add("\"" + String.format("%,.0f", emp.getBasicSalary() / 2) + "\"");
 
-        // Column 18: Hourly Rate (calculated)
         fields.add(String.format("%.2f", emp.getBasicSalary() / 168));
 
-        // Return as a single line without any newline characters
         return String.join(",", fields);
     }
 
@@ -245,13 +206,10 @@ public class EmployeeDAO extends BaseDAO<Employee> {
             }
         }
 
-        // Add the last field
         fields.add(currentField.toString());
 
         return fields;
     }
-
-    // parseCurrency() inherited from BaseDAO
 
     /**
      * Creates the appropriate employee type based on position and status
@@ -262,12 +220,10 @@ public class EmployeeDAO extends BaseDAO<Employee> {
         String pos = position.toLowerCase();
         String stat = status != null ? status.toLowerCase() : "";
 
-        // Check if probationary first
         if (stat.contains("probationary")) {
             return new ProbationaryEmployee();
         }
 
-        // Check for executive/admin positions
         if (pos.contains("chief") || pos.contains("ceo") || pos.contains("cfo") ||
                 pos.contains("coo") || pos.contains("cmo") || pos.contains("admin") ||
                 pos.contains("executive") || pos.contains("president") ||
@@ -275,20 +231,17 @@ public class EmployeeDAO extends BaseDAO<Employee> {
             return new AdminEmployee();
         }
 
-        // Check for HR positions
         if (pos.contains("hr") || pos.contains("human resources") ||
                 pos.contains("recruitment") || pos.contains("personnel")) {
             return new HREmployee();
         }
 
-        // Check for Finance positions
         if (pos.contains("finance") || pos.contains("account") ||
                 pos.contains("payroll") || pos.contains("treasury") ||
                 pos.contains("audit") || pos.contains("bookkeeper")) {
             return new FinanceEmployee();
         }
 
-        // Check for IT positions
         if (pos.contains("it") || pos.contains("information technology") ||
                 pos.contains("system") || pos.contains("tech") ||
                 pos.contains("developer") || pos.contains("programmer") ||
@@ -339,14 +292,14 @@ public class EmployeeDAO extends BaseDAO<Employee> {
 
     @Override
     public boolean delete(String id) {
-        System.out.println("EmployeeDAO.delete called for ID: " + id);
+        LOGGER.fine("EmployeeDAO.delete called for ID: " + id);
         boolean result = super.delete(id);
-        System.out.println("Delete result: " + result);
+        LOGGER.fine("Delete result: " + result);
         return result;
     }
 
     public boolean deleteEmployee(String employeeId) {
-        System.out.println("deleteEmployee called for ID: " + employeeId);
+        LOGGER.fine("deleteEmployee called for ID: " + employeeId);
         return delete(employeeId);
     }
 

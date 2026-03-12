@@ -65,20 +65,20 @@ public class AttendanceService {
         Map<String, String> info = new HashMap<>();
 
         if (employeeId == null || employeeId.trim().isEmpty()) {
-            System.out.println("getCurrentShiftInfo: Employee ID is null or empty");
+            LOGGER.fine("getCurrentShiftInfo: Employee ID is null or empty");
             info.put("status", "INVALID EMPLOYEE ID");
             info.put("timeIn", "—");
             info.put("elapsed", "—");
             return info;
         }
 
-        System.out.println("Getting shift info for employee: " + employeeId);
+        LOGGER.fine("Getting shift info for employee: " + employeeId);
 
         try {
             Attendance today = getTodayAttendance(employeeId);
 
             if (today == null) {
-                System.out.println("No attendance found for today");
+                LOGGER.fine("No attendance found for today");
                 info.put("status", "NOT CLOCKED IN");
                 info.put("timeIn", "—");
                 info.put("elapsed", "—");
@@ -86,18 +86,17 @@ public class AttendanceService {
             }
 
             String status = today.getStatus();
-            System.out.println("Today's attendance status from DAO: " + status);
+            LOGGER.fine("Today's attendance status from DAO: " + status);
 
             info.put("status", status != null ? status : "UNKNOWN");
             info.put("timeIn", formatTime(today.getTimeIn()));
 
             if (today.getTimeOut() == null) {
-                // Calculate elapsed time if still clocked in
                 if (today.getTimeIn() != null) {
                     long minutes = Duration.between(today.getTimeIn(), LocalTime.now()).toMinutes();
                     double hours = minutes / 60.0;
                     info.put("elapsed", String.format("%.1f hours", hours));
-                    System.out.println("Elapsed time: " + hours + " hours");
+                    LOGGER.fine("Elapsed time: " + hours + " hours");
                 } else {
                     info.put("elapsed", "—");
                 }

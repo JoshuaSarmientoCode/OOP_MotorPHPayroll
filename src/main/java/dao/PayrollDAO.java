@@ -4,9 +4,12 @@ import model.Payroll;
 import java.time.*;
 import java.time.format.*;
 import java.util.*;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class PayrollDAO extends BaseDAO<Payroll> {
+    private static final Logger LOGGER = Logger.getLogger(PayrollDAO.class.getName());
+
 
     private static final String[] HEADERS = {
             "Payroll ID", "Employee ID", "Employee Name", "Period", "Basic Salary",
@@ -19,7 +22,9 @@ public class PayrollDAO extends BaseDAO<Payroll> {
     private static final DateTimeFormatter PERIOD_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    public PayrollDAO(String filePath) { super(filePath); }
+    public PayrollDAO(String filePath) {
+        super(filePath);
+    }
 
     @Override
     public Payroll fromCSV(String csvLine) {
@@ -27,13 +32,16 @@ public class PayrollDAO extends BaseDAO<Payroll> {
         if (data.length < 15) return null;
 
         Payroll payroll = new Payroll();
+
         try {
             payroll.setPayrollId(safeGet(data, 0));
             payroll.setEmployeeId(safeGet(data, 1));
             payroll.setEmployeeName(safeGet(data, 2));
 
             String periodStr = safeGet(data, 3);
-            if (!periodStr.isEmpty()) payroll.setPayrollPeriod(YearMonth.parse(periodStr, PERIOD_FORMATTER));
+            if (!periodStr.isEmpty()) {
+                payroll.setPayrollPeriod(YearMonth.parse(periodStr, PERIOD_FORMATTER));
+            }
 
             payroll.setBasicSalary(parseDouble(safeGet(data, 4)));
             payroll.setRiceSubsidy(parseDouble(safeGet(data, 5)));
@@ -51,19 +59,24 @@ public class PayrollDAO extends BaseDAO<Payroll> {
             if (data.length > 16) payroll.setPresentDays(parseInt(safeGet(data, 16)));
             if (data.length > 17) payroll.setTotalLeaveDays(parseInt(safeGet(data, 17)));
             if (data.length > 18) payroll.setOvertimeHours(parseDouble(safeGet(data, 18)));
-            if (data.length > 19 && !safeGet(data, 19).isEmpty())
+
+            if (data.length > 19 && !safeGet(data, 19).isEmpty()) {
                 payroll.setGeneratedDate(LocalDate.parse(safeGet(data, 19), DATE_FORMATTER));
+            }
+
             if (data.length > 20) payroll.setStatus(safeGet(data, 20));
 
         } catch (Exception e) {
             LOGGER.warning("Error parsing payroll: " + e.getMessage());
             return null;
         }
+
         return payroll;
     }
 
     @Override
     public String toCSV(Payroll payroll) {
+        // Return a single line without any newline characters
         return String.join(",",
                 payroll.getPayrollId(),
                 payroll.getEmployeeId(),
@@ -90,10 +103,16 @@ public class PayrollDAO extends BaseDAO<Payroll> {
     }
 
     @Override
-    protected String[] getHeaders() { return HEADERS; }
+    protected String[] getHeaders() {
+        return HEADERS;
+    }
 
     @Override
-    protected String getId(Payroll item) { return item.getPayrollId(); }
+    protected String getId(Payroll item) {
+        return item.getPayrollId();
+    }
+
+    // ========== BUSINESS METHODS ==========
 
     public List<Payroll> findByEmployeeId(String employeeId) {
         return cache.stream()
@@ -116,8 +135,11 @@ public class PayrollDAO extends BaseDAO<Payroll> {
         return cache.stream()
                 .filter(p -> p.getEmployeeId().equals(employeeId))
                 .filter(p -> p.getPayrollPeriod() != null && p.getPayrollPeriod().equals(period))
-                .findFirst().orElse(null);
+                .findFirst()
+                .orElse(null);
     }
 
-    public boolean addPayroll(Payroll payroll) { return add(payroll); }
+    public boolean addPayroll(Payroll payroll) {
+        return add(payroll);
+    }
 }
