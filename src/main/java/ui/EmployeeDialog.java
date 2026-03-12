@@ -2,6 +2,7 @@ package ui;
 
 import main.MainController;
 import model.*;
+import model.Employee.*;
 import service.*;
 import ui.components.UITheme;
 import javax.swing.*;

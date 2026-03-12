@@ -1,6 +1,7 @@
 package ui;
 
 import model.*;
+import model.Employee.Employee;
 import ui.components.UITheme;
 import javax.swing.*;
 import java.awt.*;

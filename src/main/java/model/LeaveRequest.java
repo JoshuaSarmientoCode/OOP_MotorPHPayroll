@@ -4,7 +4,6 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import service.ValidationService;
-import service.Validatable;
 
 public class LeaveRequest implements Approvable, Validatable {
     private String requestId;

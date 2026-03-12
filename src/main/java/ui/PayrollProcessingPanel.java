@@ -2,10 +2,10 @@ package ui;
 
 import main.MainController;
 import model.*;
+import model.Employee.Employee;
 import service.*;
 import ui.components.UITheme;
 import javax.swing.*;
-import javax.swing.border.*;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;

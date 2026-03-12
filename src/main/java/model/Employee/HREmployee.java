@@ -1,4 +1,6 @@
-package model;
+package model.Employee;
+
+import model.LeaveRequest;
 
 import java.util.ArrayList;
 import java.util.List;

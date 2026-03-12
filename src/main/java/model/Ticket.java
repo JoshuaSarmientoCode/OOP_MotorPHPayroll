@@ -4,7 +4,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import service.ValidationService;
-import service.Validatable;
 
 public class Ticket implements Approvable, Validatable {
     private String ticketId;

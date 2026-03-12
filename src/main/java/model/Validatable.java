@@ -1,5 +1,7 @@
-package service;
+package model;
 
+
+import service.ValidationService;
 
 public interface Validatable {
 

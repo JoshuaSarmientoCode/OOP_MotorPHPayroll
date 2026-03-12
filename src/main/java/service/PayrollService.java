@@ -2,11 +2,11 @@ package service;
 
 import dao.*;
 import model.*;
+import model.Employee.Employee;
 import service.deductions.*;
 import java.time.*;
 import java.util.*;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 public class PayrollService {
 

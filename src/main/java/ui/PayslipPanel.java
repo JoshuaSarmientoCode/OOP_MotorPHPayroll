@@ -2,6 +2,7 @@ package ui;
 
 import main.MainController;
 import model.*;
+import model.Employee.Employee;
 import service.*;
 import ui.components.UITheme;
 import javax.swing.*;
@@ -11,10 +12,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.time.*;
 import java.time.format.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.List;
 
 public class PayslipPanel extends JPanel {
     

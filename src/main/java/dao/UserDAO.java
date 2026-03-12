@@ -1,10 +1,9 @@
 package dao;
 
 import model.User;
-import model.Employee;
+import model.Employee.Employee;
 import java.util.*;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 public class UserDAO extends BaseDAO<User> {
     private static final Logger LOGGER = Logger.getLogger(UserDAO.class.getName());

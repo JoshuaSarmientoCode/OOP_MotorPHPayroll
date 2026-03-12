@@ -1,5 +1,6 @@
 package main;
 
+import model.Employee.Employee;
 import ui.*;
 import model.*;
 import service.*;

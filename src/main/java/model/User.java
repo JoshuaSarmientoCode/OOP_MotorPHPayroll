@@ -1,5 +1,7 @@
 package model;
 
+import model.Employee.*;
+
 import java.time.LocalDateTime;
 
 public class User {

@@ -1,4 +1,4 @@
-package model;
+package model.Employee;
 
 public class RegularEmployee extends Employee {
     // ========== PRIVATE FIELDS ==========

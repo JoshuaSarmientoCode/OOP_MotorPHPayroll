@@ -2,7 +2,7 @@
  *
  * @author Joshua
  */
-package model;
+package model.Employee;
 
 import java.time.LocalDate;
 

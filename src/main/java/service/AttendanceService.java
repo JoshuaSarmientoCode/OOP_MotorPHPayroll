@@ -2,7 +2,7 @@ package service;
 
 import dao.AttendanceDAO;
 import model.Attendance;
-import model.Employee;
+import model.Employee.Employee;
 import java.time.*;
 import java.util.*;
 import java.util.logging.*;

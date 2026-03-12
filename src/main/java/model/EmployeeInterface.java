@@ -1,5 +1,7 @@
 package model;
 
+import model.Employee.Employee;
+
 import java.time.LocalDate;
 import java.util.List;
 

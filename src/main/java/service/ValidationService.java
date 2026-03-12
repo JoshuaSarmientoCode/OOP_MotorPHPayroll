@@ -1,6 +1,9 @@
 package service;
 
 import model.*;
+import model.Employee.Employee;
+import model.Employee.RegularEmployee;
+
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.YearMonth;

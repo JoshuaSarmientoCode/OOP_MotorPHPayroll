@@ -1,6 +1,8 @@
 package dao;
 
 import model.*;
+import model.Employee.*;
+
 import java.io.*;
 import java.nio.file.*;
 import java.time.*;

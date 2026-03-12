@@ -2,6 +2,8 @@ package service;
 
 import dao.*;
 import model.*;
+import model.Employee.Employee;
+
 import java.util.*;
 import java.util.logging.Logger;
 

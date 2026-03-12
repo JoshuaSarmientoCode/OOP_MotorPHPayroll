@@ -2,9 +2,10 @@ package service;
 
 import dao.*;
 import model.*;
+import model.Employee.Employee;
+
 import java.time.*;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class EmployeeService {
 

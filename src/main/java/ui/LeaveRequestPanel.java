@@ -2,17 +2,15 @@ package ui;
 
 import main.MainController;
 import model.*;
+import model.Employee.Employee;
 import service.*;
 import ui.components.UITheme;
 import com.toedter.calendar.JDateChooser;
 import javax.swing.*;
-import javax.swing.border.*;
 import javax.swing.table.*;
 import java.awt.*;
-import java.awt.event.*;
 import java.time.*;
 import java.time.format.*;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 public class LeaveRequestPanel extends JPanel {

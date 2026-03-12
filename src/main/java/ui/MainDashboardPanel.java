@@ -2,15 +2,14 @@ package ui;
 
 import main.MainController;
 import model.*;
+import model.Employee.*;
 import service.*;
 import ui.components.UITheme;
 import javax.swing.*;
-import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.time.*;
 import java.time.format.*;
-import java.util.*;
 import java.util.List;
 
 public class MainDashboardPanel extends JPanel {
