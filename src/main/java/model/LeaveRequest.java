@@ -3,8 +3,10 @@ package model;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import service.ValidationService;
+import service.Validatable;
 
-public class LeaveRequest implements Approvable {
+public class LeaveRequest implements Approvable, Validatable {
     private String requestId;
     private String employeeId;
     private String employeeName;
@@ -92,6 +94,54 @@ public class LeaveRequest implements Approvable {
 
     public boolean isPaidLeave() {
         return leaveType != null && !leaveType.toUpperCase().contains("UNPAID");
+    }
+
+    // ========== Validatable IMPLEMENTATION ==========
+
+    @Override
+    public ValidationService.ValidationResult validate() {
+        ValidationService.ValidationResult result = new ValidationService.ValidationResult();
+
+        // Employee
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            result.addFieldError("employeeId", "Employee ID is required");
+        }
+
+        // Dates
+        if (startDate == null) {
+            result.addFieldError("startDate", "Start date is required");
+        } else if (startDate.isBefore(LocalDate.now())) {
+            result.addFieldError("startDate", "Start date cannot be in the past");
+        }
+
+        if (endDate == null) {
+            result.addFieldError("endDate", "End date is required");
+        } else if (startDate != null && endDate.isBefore(startDate)) {
+            result.addFieldError("endDate", "End date must be after start date");
+        }
+
+        if (startDate != null && endDate != null && getNumberOfDays() > 30) {
+            result.addFieldError("dates", "Leave request cannot exceed 30 days");
+        }
+
+        // Leave type
+        if (leaveType == null || leaveType.trim().isEmpty()) {
+            result.addFieldError("leaveType", "Leave type is required");
+        }
+
+        // Reason
+        if (reason == null || reason.trim().isEmpty()) {
+            result.addFieldError("reason", "Reason is required");
+        } else if (reason.trim().length() < 10) {
+            result.addFieldError("reason", "Please provide a more detailed reason");
+        }
+
+        return result;
+    }
+
+    @Override
+    public boolean isValid() {
+        return validate().isValid();
     }
 
     // ========== Approvable IMPLEMENTATION ==========

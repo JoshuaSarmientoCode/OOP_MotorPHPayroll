@@ -3,8 +3,10 @@ package model;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import service.ValidationService;
+import service.Validatable;
 
-public class Ticket implements Approvable {
+public class Ticket implements Approvable, Validatable {
     private String ticketId;
     private String employeeId;
     private String employeeName;
@@ -159,6 +161,49 @@ public class Ticket implements Approvable {
 
     public boolean isResolved() {
         return status == TicketStatus.RESOLVED || status == TicketStatus.CLOSED;
+    }
+
+    // ========== Validatable IMPLEMENTATION ==========
+
+    @Override
+    public ValidationService.ValidationResult validate() {
+        ValidationService.ValidationResult result = new ValidationService.ValidationResult();
+
+        // Employee
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            result.addFieldError("employeeId", "Employee ID is required");
+        }
+
+        // Subject
+        if (subject == null || subject.trim().isEmpty()) {
+            result.addFieldError("subject", "Subject is required");
+        } else if (subject.trim().length() < 5) {
+            result.addFieldError("subject", "Subject must be at least 5 characters");
+        }
+
+        // Description
+        if (description == null || description.trim().isEmpty()) {
+            result.addFieldError("description", "Description is required");
+        } else if (description.trim().length() < 10) {
+            result.addFieldError("description", "Please provide a more detailed description");
+        }
+
+        // Category
+        if (category == null) {
+            result.addFieldError("category", "Category is required");
+        }
+
+        // Priority
+        if (priority == null) {
+            result.addFieldError("priority", "Priority is required");
+        }
+
+        return result;
+    }
+
+    @Override
+    public boolean isValid() {
+        return validate().isValid();
     }
 
     // ========== Approvable IMPLEMENTATION ==========

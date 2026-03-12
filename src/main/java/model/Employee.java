@@ -2,10 +2,14 @@ package model;
 
 import java.time.LocalDate;
 import java.time.Period;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
+import service.ValidationService;
+import service.Validatable;
 
-public abstract class Employee implements EmployeeInterface {
+public abstract class Employee implements EmployeeInterface, Validatable {
     // ========== PRIVATE FIELDS ==========
     protected String employeeId;
     protected String firstName;
@@ -210,6 +214,54 @@ public abstract class Employee implements EmployeeInterface {
                 .filter(l -> l.getLeaveType().toUpperCase().contains("UNPAID"))
                 .mapToLong(LeaveRequest::getNumberOfDays)
                 .sum();
+    }
+
+    // ========== Validatable IMPLEMENTATION ==========
+
+    @Override
+    public ValidationService.ValidationResult validate() {
+        ValidationService.ValidationResult result = new ValidationService.ValidationResult();
+
+        // Employee ID
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            result.addFieldError("employeeId", "Employee ID is required");
+        } else if (!employeeId.matches("^\\d{5}$")) {
+            result.addFieldError("employeeId", "Employee ID must be 5 digits");
+        }
+
+        // Name
+        if (firstName == null || firstName.trim().isEmpty()) {
+            result.addFieldError("firstName", "First name is required");
+        }
+        if (lastName == null || lastName.trim().isEmpty()) {
+            result.addFieldError("lastName", "Last name is required");
+        }
+
+        // Birth date
+        if (birthDate == null) {
+            result.addFieldError("birthDate", "Birth date is required");
+        } else {
+            int age = Period.between(birthDate, LocalDate.now()).getYears();
+            if (age < 18) result.addFieldError("birthDate", "Employee must be at least 18 years old");
+            if (age > 100) result.addFieldError("birthDate", "Invalid birth date");
+        }
+
+        // Salary
+        if (basicSalary < 10000) {
+            result.addFieldError("basicSalary", "Basic salary must be at least ₱10,000");
+        }
+
+        // Position
+        if (position == null || position.trim().isEmpty()) {
+            result.addFieldError("position", "Position is required");
+        }
+
+        return result;
+    }
+
+    @Override
+    public boolean isValid() {
+        return validate().isValid();
     }
 
     // ========== ABSTRACT METHODS FOR SUBCLASSES ==========
