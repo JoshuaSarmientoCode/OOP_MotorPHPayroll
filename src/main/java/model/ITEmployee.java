@@ -13,9 +13,9 @@ public class ITEmployee extends Employee {
     private String itSpecialization;
     private int ticketsResolved;
     private double systemUptime;
-    
+
     // ========== CONSTRUCTORS ==========
-    
+
     public ITEmployee() {
         super();
         this.systemPermissions = new ArrayList<>();
@@ -26,11 +26,11 @@ public class ITEmployee extends Employee {
         this.itSpecialization = "TECHNICAL_SUPPORT";
         this.ticketsResolved = 0;
         this.systemUptime = 99.9;
-        
+
         // Add default permissions
         addDefaultPermissions();
     }
-    
+
     public ITEmployee(String employeeId, String firstName, String lastName, String position) {
         super(employeeId, firstName, lastName, position);
         this.systemPermissions = new ArrayList<>();
@@ -41,71 +41,71 @@ public class ITEmployee extends Employee {
         this.itSpecialization = "TECHNICAL_SUPPORT";
         this.ticketsResolved = 0;
         this.systemUptime = 99.9;
-        
+
         addDefaultPermissions();
     }
-    
+
     // ========== GETTERS ==========
-    
-    public List<String> getSystemPermissions() { 
-        return new ArrayList<>(systemPermissions); 
+
+    public List<String> getSystemPermissions() {
+        return new ArrayList<>(systemPermissions);
     }
-    
-    public List<String> getUserAccounts() { 
-        return new ArrayList<>(userAccounts); 
+
+    public List<String> getUserAccounts() {
+        return new ArrayList<>(userAccounts);
     }
-    
-    public List<String> getSystemLogs() { 
-        return new ArrayList<>(systemLogs); 
+
+    public List<String> getSystemLogs() {
+        return new ArrayList<>(systemLogs);
     }
-    
-    public List<String> getTechnicalIssues() { 
-        return new ArrayList<>(technicalIssues); 
+
+    public List<String> getTechnicalIssues() {
+        return new ArrayList<>(technicalIssues);
     }
-    
-    public List<String> getResolvedIssues() { 
-        return new ArrayList<>(resolvedIssues); 
+
+    public List<String> getResolvedIssues() {
+        return new ArrayList<>(resolvedIssues);
     }
-    
-    public String getItSpecialization() { 
-        return itSpecialization; 
+
+    public String getItSpecialization() {
+        return itSpecialization;
     }
-    
-    public int getTicketsResolved() { 
-        return ticketsResolved; 
+
+    public int getTicketsResolved() {
+        return ticketsResolved;
     }
-    
-    public double getSystemUptime() { 
-        return systemUptime; 
+
+    public double getSystemUptime() {
+        return systemUptime;
     }
-    
+
     // ========== SETTERS WITH VALIDATION ==========
-    
+
     public void setSystemPermissions(List<String> systemPermissions) {
-        this.systemPermissions = systemPermissions != null ? 
-            new ArrayList<>(systemPermissions) : new ArrayList<>();
+        this.systemPermissions = systemPermissions != null ?
+                new ArrayList<>(systemPermissions) : new ArrayList<>();
     }
-    
+
     public void setUserAccounts(List<String> userAccounts) {
-        this.userAccounts = userAccounts != null ? 
-            new ArrayList<>(userAccounts) : new ArrayList<>();
+        this.userAccounts = userAccounts != null ?
+                new ArrayList<>(userAccounts) : new ArrayList<>();
     }
-    
+
     public void setSystemLogs(List<String> systemLogs) {
-        this.systemLogs = systemLogs != null ? 
-            new ArrayList<>(systemLogs) : new ArrayList<>();
+        this.systemLogs = systemLogs != null ?
+                new ArrayList<>(systemLogs) : new ArrayList<>();
     }
-    
+
     public void setTechnicalIssues(List<String> technicalIssues) {
-        this.technicalIssues = technicalIssues != null ? 
-            new ArrayList<>(technicalIssues) : new ArrayList<>();
+        this.technicalIssues = technicalIssues != null ?
+                new ArrayList<>(technicalIssues) : new ArrayList<>();
     }
-    
+
     public void setResolvedIssues(List<String> resolvedIssues) {
-        this.resolvedIssues = resolvedIssues != null ? 
-            new ArrayList<>(resolvedIssues) : new ArrayList<>();
+        this.resolvedIssues = resolvedIssues != null ?
+                new ArrayList<>(resolvedIssues) : new ArrayList<>();
     }
-    
+
     public void setItSpecialization(String itSpecialization) {
         if (itSpecialization == null || itSpecialization.trim().isEmpty()) {
             throw new IllegalArgumentException("IT specialization cannot be empty");
@@ -116,32 +116,32 @@ public class ITEmployee extends Employee {
         }
         this.itSpecialization = spec;
     }
-    
+
     public void setTicketsResolved(int ticketsResolved) {
         if (ticketsResolved < 0) {
             throw new IllegalArgumentException("Tickets resolved cannot be negative");
         }
         this.ticketsResolved = ticketsResolved;
     }
-    
+
     public void setSystemUptime(double systemUptime) {
         if (systemUptime < 0 || systemUptime > 100) {
             throw new IllegalArgumentException("System uptime must be between 0 and 100");
         }
         this.systemUptime = systemUptime;
     }
-    
+
     // ========== PRIVATE METHODS ==========
-    
+
     private void addDefaultPermissions() {
         systemPermissions.add("VIEW_SYSTEM_LOGS");
         systemPermissions.add("MANAGE_USER_ACCOUNTS");
         systemPermissions.add("RESET_PASSWORDS");
         systemPermissions.add("VIEW_TECHNICAL_ISSUES");
     }
-    
+
     // ========== BUSINESS METHODS ==========
-    
+
     /**
      * Add system permission
      */
@@ -154,7 +154,7 @@ public class ITEmployee extends Employee {
             logSystemEvent("PERMISSION_ADDED: " + permission);
         }
     }
-    
+
     /**
      * Add user account
      */
@@ -162,12 +162,12 @@ public class ITEmployee extends Employee {
         if (username == null || employeeId == null) {
             throw new IllegalArgumentException("Username and employee ID are required");
         }
-        String account = String.format("%s (ID: %s) - Created %s", 
-            username, employeeId, java.time.LocalDate.now());
+        String account = String.format("%s (ID: %s) - Created %s",
+                username, employeeId, java.time.LocalDate.now());
         userAccounts.add(account);
         logSystemEvent("USER_CREATED: " + username);
     }
-    
+
     /**
      * Log system event
      */
@@ -175,14 +175,14 @@ public class ITEmployee extends Employee {
         if (event != null && !event.trim().isEmpty()) {
             String timestamped = java.time.LocalDateTime.now() + " - " + event;
             systemLogs.add(0, timestamped); // Add to beginning
-            
+
             // Keep only last 1000 logs
             if (systemLogs.size() > 1000) {
                 systemLogs = systemLogs.subList(0, 1000);
             }
         }
     }
-    
+
     /**
      * Report technical issue
      */
@@ -193,13 +193,13 @@ public class ITEmployee extends Employee {
         if (priority == null || !priority.matches("LOW|MEDIUM|HIGH|CRITICAL")) {
             throw new IllegalArgumentException("Priority must be LOW, MEDIUM, HIGH, or CRITICAL");
         }
-        
-        String issueEntry = String.format("[%s] %s - %s - Reported %s", 
-            priority, issue, "OPEN", java.time.LocalDateTime.now());
+
+        String issueEntry = String.format("[%s] %s - %s - Reported %s",
+                priority, issue, "OPEN", java.time.LocalDateTime.now());
         technicalIssues.add(issueEntry);
         logSystemEvent("ISSUE_REPORTED: " + issue);
     }
-    
+
     /**
      * Resolve technical issue
      */
@@ -207,34 +207,34 @@ public class ITEmployee extends Employee {
         if (issueId == null || resolution == null) {
             throw new IllegalArgumentException("Issue ID and resolution are required");
         }
-        
+
         // Find and remove from open issues
         technicalIssues.removeIf(issue -> issue.contains(issueId));
-        
+
         // Add to resolved issues
-        String resolved = String.format("%s - RESOLVED: %s on %s", 
-            issueId, resolution, java.time.LocalDateTime.now());
+        String resolved = String.format("%s - RESOLVED: %s on %s",
+                issueId, resolution, java.time.LocalDateTime.now());
         resolvedIssues.add(0, resolved);
-        
+
         ticketsResolved++;
         logSystemEvent("ISSUE_RESOLVED: " + issueId);
     }
-    
+
     /**
      * Get open issues count
      */
     public int getOpenIssuesCount() {
         return technicalIssues.size();
     }
-    
+
     /**
      * Get system health status
      */
     public String getSystemHealthStatus() {
-        return String.format("System Uptime: %.1f%% | Open Issues: %d | Tickets Resolved: %d", 
-            systemUptime, getOpenIssuesCount(), ticketsResolved);
+        return String.format("System Uptime: %.1f%% | Open Issues: %d | Tickets Resolved: %d",
+                systemUptime, getOpenIssuesCount(), ticketsResolved);
     }
-    
+
     /**
      * Get IT statistics
      */
@@ -248,7 +248,7 @@ public class ITEmployee extends Employee {
         stats.put("specialization", itSpecialization);
         return stats;
     }
-    
+
     /**
      * Reset user password
      */
@@ -260,14 +260,17 @@ public class ITEmployee extends Employee {
         logSystemEvent("PASSWORD_RESET: " + username);
         return newPassword;
     }
-    
+
     // ========== OVERRIDDEN ABSTRACT METHODS ==========
-    
+
+    @Override
+    public String getDepartment() { return "INFORMATION TECHNOLOGY"; }
+
     @Override
     public String getRoleName() {
         return "INFORMATION TECHNOLOGY";
     }
-    
+
     @Override
     public boolean canAccess(String feature) {
         switch (feature) {
@@ -281,18 +284,18 @@ public class ITEmployee extends Employee {
                 return false;
         }
     }
-    
+
     @Override
     public DashboardType getDashboardType() {
         return DashboardType.IT;
     }
-    
+
     // ========== OVERRIDDEN OBJECT METHODS ==========
-    
+
     @Override
     public String toString() {
         return String.format("ITEmployee[id=%s, name=%s, spec=%s, open=%d, resolved=%d]",
-            getEmployeeId(), getFullName(), itSpecialization, 
-            getOpenIssuesCount(), ticketsResolved);
+                getEmployeeId(), getFullName(), itSpecialization,
+                getOpenIssuesCount(), ticketsResolved);
     }
 }

@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 
-public class LeaveRequest {
+public class LeaveRequest implements Approvable {
     private String requestId;
     private String employeeId;
     private String employeeName;
@@ -19,19 +19,21 @@ public class LeaveRequest {
     private String remarks;
     private String department;
     private String position;
-    
+
     public enum LeaveStatus {
         PENDING, APPROVED, REJECTED, CANCELLED
     }
-    
+
     public LeaveRequest() {
         this.requestDate = LocalDate.now();
         this.status = LeaveStatus.PENDING;
     }
-    
+
     // ========== GETTERS ==========
-    
+
+    @Override
     public String getRequestId() { return requestId; }
+    @Override
     public String getEmployeeId() { return employeeId; }
     public String getEmployeeName() { return employeeName; }
     public LocalDate getStartDate() { return startDate; }
@@ -40,14 +42,15 @@ public class LeaveRequest {
     public String getReason() { return reason; }
     public LeaveStatus getStatus() { return status; }
     public String getApprovedBy() { return approvedBy; }
+    @Override
     public LocalDate getRequestDate() { return requestDate; }
     public LocalDate getApprovalDate() { return approvalDate; }
     public String getRemarks() { return remarks; }
     public String getDepartment() { return department; }
     public String getPosition() { return position; }
-    
+
     // ========== SETTERS ==========
-    
+
     public void setRequestId(String requestId) { this.requestId = requestId; }
     public void setEmployeeId(String employeeId) { this.employeeId = employeeId; }
     public void setEmployeeName(String employeeName) { this.employeeName = employeeName; }
@@ -62,44 +65,67 @@ public class LeaveRequest {
     public void setRemarks(String remarks) { this.remarks = remarks; }
     public void setDepartment(String department) { this.department = department; }
     public void setPosition(String position) { this.position = position; }
-    
+
     // ========== BUSINESS METHODS ==========
-    
+
     public int getNumberOfDays() {
         if (startDate != null && endDate != null) {
             return (int) ChronoUnit.DAYS.between(startDate, endDate) + 1;
         }
         return 0;
     }
-    
+
+    @Override
     public boolean isApproved() {
         return status == LeaveStatus.APPROVED;
     }
-    
+
+    @Override
     public boolean isPending() {
         return status == LeaveStatus.PENDING;
     }
-    
+
+    @Override
     public boolean isRejected() {
         return status == LeaveStatus.REJECTED;
     }
-    
+
     public boolean isPaidLeave() {
         return leaveType != null && !leaveType.toUpperCase().contains("UNPAID");
     }
-    
+
+    // ========== Approvable IMPLEMENTATION ==========
+
+    @Override
+    public void approve(String approvedBy) {
+        this.status = LeaveStatus.APPROVED;
+        this.approvedBy = approvedBy;
+        this.approvalDate = LocalDate.now();
+    }
+
+    @Override
+    public void reject(String rejectedBy, String reason) {
+        this.status = LeaveStatus.REJECTED;
+        this.approvedBy = rejectedBy;
+        this.remarks = reason;
+        this.approvalDate = LocalDate.now();
+    }
+
+    @Override
+    public String getStatusDisplay() { return status != null ? status.toString() : "PENDING"; }
+
     public String getFormattedPeriodLong() {
         if (startDate == null || endDate == null) return "";
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MMMM dd, yyyy");
         return startDate.format(fmt) + " to " + endDate.format(fmt);
     }
-    
+
     public String getFormattedRequestDate() {
         return requestDate.format(DateTimeFormatter.ofPattern("MMM dd, yyyy"));
     }
-    
+
     public String getFormattedApprovalDate() {
-        return approvalDate != null ? 
-            approvalDate.format(DateTimeFormatter.ofPattern("MMM dd, yyyy")) : "";
+        return approvalDate != null ?
+                approvalDate.format(DateTimeFormatter.ofPattern("MMM dd, yyyy")) : "";
     }
 }

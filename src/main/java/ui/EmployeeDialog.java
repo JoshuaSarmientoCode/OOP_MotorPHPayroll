@@ -698,12 +698,7 @@ public class EmployeeDialog extends JDialog {
         String selectedDepartment = (String) departmentCombo.getSelectedItem();
         String selectedType = (String) employeeTypeCombo.getSelectedItem();
 
-        Employee emp;
-        if (employee != null) {
-            emp = employee;
-        } else {
-            emp = createEmployeeByDepartment(selectedDepartment);
-        }
+        Employee emp = createEmployeeByDepartment(selectedDepartment);
 
         // Set basic info
         emp.setEmployeeId(empIdField.getText().trim());
@@ -735,7 +730,9 @@ public class EmployeeDialog extends JDialog {
             LocalDate birthDate = LocalDate.parse(birthDateField.getText().trim(),
                     DateTimeFormatter.ofPattern("MM/dd/yyyy"));
             emp.setBirthDate(birthDate);
-            emp.setHireDate(birthDate.plusYears(20));
+            emp.setHireDate(employee != null && employee.getHireDate() != null
+                    ? employee.getHireDate()
+                    : birthDate.plusYears(20));
         } catch (Exception e) {
             emp.setBirthDate(LocalDate.of(1990, 1, 1));
             emp.setHireDate(LocalDate.now().minusYears(1));

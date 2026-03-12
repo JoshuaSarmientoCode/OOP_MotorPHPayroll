@@ -13,9 +13,9 @@ public class FinanceEmployee extends Employee {
     private double monthlyBudget;
     private double spentAmount;
     private String financeRole;
-    
+
     // ========== CONSTRUCTORS ==========
-    
+
     public FinanceEmployee() {
         super();
         this.processedPayrolls = new ArrayList<>();
@@ -27,7 +27,7 @@ public class FinanceEmployee extends Employee {
         this.spentAmount = 0.0;
         this.financeRole = "ACCOUNTANT";
     }
-    
+
     public FinanceEmployee(String employeeId, String firstName, String lastName, String position) {
         super(employeeId, firstName, lastName, position);
         this.processedPayrolls = new ArrayList<>();
@@ -39,52 +39,52 @@ public class FinanceEmployee extends Employee {
         this.spentAmount = 0.0;
         this.financeRole = "ACCOUNTANT";
     }
-    
+
     // ========== GETTERS ==========
-    
-    public List<Payroll> getProcessedPayrolls() { 
-        return new ArrayList<>(processedPayrolls); 
+
+    public List<Payroll> getProcessedPayrolls() {
+        return new ArrayList<>(processedPayrolls);
     }
-    
-    public double getBudgetAllocation() { 
-        return budgetAllocation; 
+
+    public double getBudgetAllocation() {
+        return budgetAllocation;
     }
-    
-    public List<String> getTaxRecords() { 
-        return new ArrayList<>(taxRecords); 
+
+    public List<String> getTaxRecords() {
+        return new ArrayList<>(taxRecords);
     }
-    
-    public List<String> getFinancialReports() { 
-        return new ArrayList<>(financialReports); 
+
+    public List<String> getFinancialReports() {
+        return new ArrayList<>(financialReports);
     }
-    
-    public List<String> getApprovedTransactions() { 
-        return new ArrayList<>(approvedTransactions); 
+
+    public List<String> getApprovedTransactions() {
+        return new ArrayList<>(approvedTransactions);
     }
-    
-    public double getMonthlyBudget() { 
-        return monthlyBudget; 
+
+    public double getMonthlyBudget() {
+        return monthlyBudget;
     }
-    
-    public double getSpentAmount() { 
-        return spentAmount; 
+
+    public double getSpentAmount() {
+        return spentAmount;
     }
-    
-    public double getRemainingBudget() { 
-        return monthlyBudget - spentAmount; 
+
+    public double getRemainingBudget() {
+        return monthlyBudget - spentAmount;
     }
-    
-    public String getFinanceRole() { 
-        return financeRole; 
+
+    public String getFinanceRole() {
+        return financeRole;
     }
-    
+
     // ========== SETTERS WITH VALIDATION ==========
-    
-    public void setProcessedPayrolls(List<Payroll> processedPayrolls) { 
-        this.processedPayrolls = processedPayrolls != null ? 
-            new ArrayList<>(processedPayrolls) : new ArrayList<>();
+
+    public void setProcessedPayrolls(List<Payroll> processedPayrolls) {
+        this.processedPayrolls = processedPayrolls != null ?
+                new ArrayList<>(processedPayrolls) : new ArrayList<>();
     }
-    
+
     public void setBudgetAllocation(double budgetAllocation) {
         if (budgetAllocation < 0) {
             throw new IllegalArgumentException("Budget allocation cannot be negative");
@@ -94,22 +94,22 @@ public class FinanceEmployee extends Employee {
         }
         this.budgetAllocation = budgetAllocation;
     }
-    
+
     public void setTaxRecords(List<String> taxRecords) {
-        this.taxRecords = taxRecords != null ? 
-            new ArrayList<>(taxRecords) : new ArrayList<>();
+        this.taxRecords = taxRecords != null ?
+                new ArrayList<>(taxRecords) : new ArrayList<>();
     }
-    
+
     public void setFinancialReports(List<String> financialReports) {
-        this.financialReports = financialReports != null ? 
-            new ArrayList<>(financialReports) : new ArrayList<>();
+        this.financialReports = financialReports != null ?
+                new ArrayList<>(financialReports) : new ArrayList<>();
     }
-    
+
     public void setApprovedTransactions(List<String> approvedTransactions) {
-        this.approvedTransactions = approvedTransactions != null ? 
-            new ArrayList<>(approvedTransactions) : new ArrayList<>();
+        this.approvedTransactions = approvedTransactions != null ?
+                new ArrayList<>(approvedTransactions) : new ArrayList<>();
     }
-    
+
     public void setMonthlyBudget(double monthlyBudget) {
         if (monthlyBudget < 0) {
             throw new IllegalArgumentException("Monthly budget cannot be negative");
@@ -119,7 +119,7 @@ public class FinanceEmployee extends Employee {
         }
         this.monthlyBudget = monthlyBudget;
     }
-    
+
     public void setSpentAmount(double spentAmount) {
         if (spentAmount < 0) {
             throw new IllegalArgumentException("Spent amount cannot be negative");
@@ -129,7 +129,7 @@ public class FinanceEmployee extends Employee {
         }
         this.spentAmount = spentAmount;
     }
-    
+
     public void setFinanceRole(String financeRole) {
         if (financeRole == null || financeRole.trim().isEmpty()) {
             throw new IllegalArgumentException("Finance role cannot be empty");
@@ -140,9 +140,9 @@ public class FinanceEmployee extends Employee {
         }
         this.financeRole = role;
     }
-    
+
     // ========== BUSINESS METHODS ==========
-    
+
     /**
      * Add processed payroll
      */
@@ -152,7 +152,7 @@ public class FinanceEmployee extends Employee {
         }
         processedPayrolls.add(payroll);
     }
-    
+
     /**
      * Add tax record
      */
@@ -162,13 +162,13 @@ public class FinanceEmployee extends Employee {
         }
         String timestamped = java.time.LocalDateTime.now() + " - " + taxRecord;
         taxRecords.add(0, timestamped); // Add to beginning
-        
+
         // Keep only last 1000 records
         if (taxRecords.size() > 1000) {
             taxRecords = taxRecords.subList(0, 1000);
         }
     }
-    
+
     /**
      * Generate financial report
      */
@@ -176,21 +176,21 @@ public class FinanceEmployee extends Employee {
         if (reportType == null || reportType.trim().isEmpty()) {
             throw new IllegalArgumentException("Report type cannot be empty");
         }
-        String report = String.format("%s REPORT - Generated on %s", 
-            reportType.toUpperCase(), java.time.LocalDate.now());
+        String report = String.format("%s REPORT - Generated on %s",
+                reportType.toUpperCase(), java.time.LocalDate.now());
         financialReports.add(0, report);
     }
-    
+
     /**
      * Get recent financial reports
      */
     public List<String> getRecentReports(int count) {
         if (count <= 0) return new ArrayList<>();
         return financialReports.stream()
-            .limit(Math.min(count, financialReports.size()))
-            .toList();
+                .limit(Math.min(count, financialReports.size()))
+                .toList();
     }
-    
+
     /**
      * Approve transaction
      */
@@ -204,32 +204,32 @@ public class FinanceEmployee extends Employee {
         if (spentAmount + amount > monthlyBudget) {
             throw new IllegalArgumentException("Transaction would exceed monthly budget");
         }
-        
-        String approval = String.format("APPROVED: %s - ₱%,.2f on %s", 
-            transactionDetails, amount, java.time.LocalDate.now());
+
+        String approval = String.format("APPROVED: %s - ₱%,.2f on %s",
+                transactionDetails, amount, java.time.LocalDate.now());
         approvedTransactions.add(0, approval);
         spentAmount += amount;
     }
-    
+
     /**
      * Get spending status
      */
     public String getSpendingStatus() {
         double percentUsed = (spentAmount / monthlyBudget) * 100;
-        return String.format("Budget Used: ₱%,.2f / ₱%,.2f (%.1f%%)", 
-            spentAmount, monthlyBudget, percentUsed);
+        return String.format("Budget Used: ₱%,.2f / ₱%,.2f (%.1f%%)",
+                spentAmount, monthlyBudget, percentUsed);
     }
-    
+
     /**
      * Get total processed payroll amount for period
      */
     public double getTotalProcessedPayroll(java.time.YearMonth period) {
         return processedPayrolls.stream()
-            .filter(p -> p.getPayrollPeriod().equals(period))
-            .mapToDouble(Payroll::getNetSalary)
-            .sum();
+                .filter(p -> p.getPayrollPeriod().equals(period))
+                .mapToDouble(Payroll::getNetSalary)
+                .sum();
     }
-    
+
     /**
      * Get payroll statistics
      */
@@ -242,14 +242,17 @@ public class FinanceEmployee extends Employee {
         stats.put("budgetUtilization", getSpendingStatus());
         return stats;
     }
-    
+
     // ========== OVERRIDDEN ABSTRACT METHODS ==========
-    
+
+    @Override
+    public String getDepartment() { return "FINANCE"; }
+
     @Override
     public String getRoleName() {
         return "FINANCE";
     }
-    
+
     @Override
     public boolean canAccess(String feature) {
         switch (feature) {
@@ -264,17 +267,17 @@ public class FinanceEmployee extends Employee {
                 return false;
         }
     }
-    
+
     @Override
     public DashboardType getDashboardType() {
         return DashboardType.FINANCE;
     }
-    
+
     // ========== OVERRIDDEN OBJECT METHODS ==========
-    
+
     @Override
     public String toString() {
         return String.format("FinanceEmployee[id=%s, name=%s, role=%s, budget=₱%,.2f]",
-            getEmployeeId(), getFullName(), financeRole, getRemainingBudget());
+                getEmployeeId(), getFullName(), financeRole, getRemainingBudget());
     }
 }

@@ -5,7 +5,7 @@ import java.time.Period;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class Employee {
+public abstract class Employee implements EmployeeInterface {
     // ========== PRIVATE FIELDS ==========
     protected String employeeId;
     protected String firstName;
@@ -26,9 +26,9 @@ public abstract class Employee {
     protected List<Attendance> attendanceRecords;
     protected List<LeaveRequest> leaveRequests;
     protected ProbationDetails probationDetails;
-    
+
     // ========== CONSTRUCTORS ==========
-    
+
     public Employee() {
         this.attendanceRecords = new ArrayList<>();
         this.leaveRequests = new ArrayList<>();
@@ -38,7 +38,7 @@ public abstract class Employee {
         this.phoneAllowance = 500.0;
         this.clothingAllowance = 500.0;
     }
-    
+
     public Employee(String employeeId, String firstName, String lastName, String position) {
         this();
         setEmployeeId(employeeId);
@@ -46,9 +46,9 @@ public abstract class Employee {
         setLastName(lastName);
         setPosition(position);
     }
-    
+
     // ========== GETTERS ==========
-    
+
     public String getEmployeeId() { return employeeId; }
     public String getFirstName() { return firstName; }
     public String getLastName() { return lastName; }
@@ -68,9 +68,9 @@ public abstract class Employee {
     public List<Attendance> getAttendanceRecords() { return new ArrayList<>(attendanceRecords); }
     public List<LeaveRequest> getLeaveRequests() { return new ArrayList<>(leaveRequests); }
     public ProbationDetails getProbationDetails() { return probationDetails; }
-    
+
     // ========== SETTERS ==========
-    
+
     public void setEmployeeId(String employeeId) { this.employeeId = employeeId; }
     public void setFirstName(String firstName) { this.firstName = firstName; }
     public void setLastName(String lastName) { this.lastName = lastName; }
@@ -85,7 +85,7 @@ public abstract class Employee {
     public void setPosition(String position) { this.position = position; }
     public void setHireDate(LocalDate hireDate) { this.hireDate = hireDate; }
     public void setStatus(EmploymentStatus status) { this.status = status; }
-    public void setStatus(String statusString) { 
+    public void setStatus(String statusString) {
         if (statusString == null || statusString.trim().isEmpty()) {
             this.status = EmploymentStatus.REGULAR;
         } else {
@@ -101,120 +101,140 @@ public abstract class Employee {
     public void setAttendanceRecords(List<Attendance> attendanceRecords) { this.attendanceRecords = attendanceRecords; }
     public void setLeaveRequests(List<LeaveRequest> leaveRequests) { this.leaveRequests = leaveRequests; }
     public void setProbationDetails(ProbationDetails probationDetails) { this.probationDetails = probationDetails; }
-    
+
     // ========== BUSINESS METHODS ==========
-    
+
+    @Override
     public String getFullName() {
         return firstName + " " + lastName;
     }
-    
+
+    @Override
     public String getFormattedName() {
         return lastName + ", " + firstName;
     }
-    
+
+    @Override
     public int getAge() {
         if (birthDate == null) return 0;
         return Period.between(birthDate, LocalDate.now()).getYears();
     }
-    
+
+    @Override
     public double getTotalAllowances() {
         return riceSubsidy + phoneAllowance + clothingAllowance;
     }
-    
+
+    @Override
     public double getGrossSalary() {
         return basicSalary + getTotalAllowances();
     }
-    
+
+    @Override
     public double getMonthlySalary() {
         return getGrossSalary();
     }
-    
+
+    @Override
     public double getHourlyRate() {
         return basicSalary / 168; // 168 working hours per month (21 days * 8 hours)
     }
-    
+
+    @Override
     public double getDailyRate() {
         return basicSalary / 22; // 22 working days per month
     }
-    
+
+    @Override
     public boolean isProbationary() {
         return status == EmploymentStatus.PROBATIONARY;
     }
-    
+
+    @Override
     public boolean isRegular() {
         return status == EmploymentStatus.REGULAR;
     }
-    
+
+    @Override
     public String getDepartment() {
         if (position == null) return "OPERATIONS";
         if (position.contains("HR")) return "HUMAN RESOURCES";
         if (position.contains("IT")) return "INFORMATION TECHNOLOGY";
         if (position.contains("Account") || position.contains("Finance")) return "FINANCE";
         if (position.contains("Sales")) return "SALES & MARKETING";
-        if (position.contains("Chief") || position.contains("CEO") || 
-            position.contains("CFO") || position.contains("COO")) return "EXECUTIVE";
+        if (position.contains("Chief") || position.contains("CEO") ||
+                position.contains("CFO") || position.contains("COO")) return "EXECUTIVE";
         return "OPERATIONS";
     }
-    
+
+    @Override
     public void addAttendance(Attendance attendance) {
         if (attendance != null) {
             this.attendanceRecords.add(attendance);
         }
     }
-    
+
+    @Override
     public void addLeaveRequest(LeaveRequest leaveRequest) {
         if (leaveRequest != null) {
             this.leaveRequests.add(leaveRequest);
         }
     }
-    
+
+    @Override
     public List<Attendance> getAttendanceForPeriod(LocalDate start, LocalDate end) {
         return attendanceRecords.stream()
                 .filter(a -> !a.getDate().isBefore(start) && !a.getDate().isAfter(end))
                 .toList();
     }
-    
+
+    @Override
     public double getTotalHoursWorked(LocalDate start, LocalDate end) {
         return getAttendanceForPeriod(start, end).stream()
                 .filter(a -> a.getTimeOut() != null)
                 .mapToDouble(Attendance::getHoursWorked)
                 .sum();
     }
-    
+
+    @Override
     public List<LeaveRequest> getLeaveRequestsForPeriod(LocalDate start, LocalDate end) {
         return leaveRequests.stream()
                 .filter(l -> !l.getEndDate().isBefore(start) && !l.getStartDate().isAfter(end))
                 .filter(l -> l.getStatus() == LeaveRequest.LeaveStatus.APPROVED)
                 .toList();
     }
-    
+
+    @Override
     public long getUnpaidLeaveDays(LocalDate start, LocalDate end) {
         return getLeaveRequestsForPeriod(start, end).stream()
                 .filter(l -> l.getLeaveType().toUpperCase().contains("UNPAID"))
                 .mapToLong(LeaveRequest::getNumberOfDays)
                 .sum();
     }
-    
+
     // ========== ABSTRACT METHODS FOR SUBCLASSES ==========
-    
+
+    @Override
     public abstract String getRoleName();
+    @Override
     public abstract boolean canAccess(String feature);
-    public abstract DashboardType getDashboardType();
-    
+    @Override
+    public abstract Employee.DashboardType getDashboardType();
+
     // ========== ENUMS ==========
-    
+
     public enum DashboardType {
         ADMIN, HR, FINANCE, IT, EMPLOYEE
     }
-    
+
     // ========== OVERRIDDEN OBJECT METHODS ==========
-    
+
     @Override
     public String toString() {
         return String.format("Employee[id=%s, name=%s, position=%s, status=%s]",
                 employeeId, getFullName(), position, status);
     }
-    
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -222,7 +242,7 @@ public abstract class Employee {
         Employee employee = (Employee) o;
         return employeeId.equals(employee.employeeId);
     }
-    
+
     @Override
     public int hashCode() {
         return employeeId.hashCode();

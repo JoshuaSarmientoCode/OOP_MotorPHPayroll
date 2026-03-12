@@ -125,8 +125,8 @@ public class ValidationService {
         }
 
         if (emp.isProbationary() && emp.getProbationDetails() == null) {
-            result.addFieldError("probationDetails",
-                    "Probationary employees must have probation details");
+            emp.setProbationDetails(new ProbationDetails(
+                    emp.getHireDate() != null ? emp.getHireDate() : LocalDate.now()));
         }
 
         return result;

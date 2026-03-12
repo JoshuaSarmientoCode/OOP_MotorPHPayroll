@@ -12,9 +12,9 @@ public class HREmployee extends Employee {
     private List<String> conductedInterviews;
     private int employeesManaged;
     private String hrSpecialization;
-    
+
     // ========== CONSTRUCTORS ==========
-    
+
     public HREmployee() {
         super();
         this.pendingApprovals = new ArrayList<>();
@@ -25,7 +25,7 @@ public class HREmployee extends Employee {
         this.employeesManaged = 0;
         this.hrSpecialization = "GENERALIST";
     }
-    
+
     public HREmployee(String employeeId, String firstName, String lastName, String position) {
         super(employeeId, firstName, lastName, position);
         this.pendingApprovals = new ArrayList<>();
@@ -36,44 +36,44 @@ public class HREmployee extends Employee {
         this.employeesManaged = 0;
         this.hrSpecialization = "GENERALIST";
     }
-    
+
     // ========== GETTERS ==========
-    
-    public List<LeaveRequest> getPendingApprovals() { 
-        return new ArrayList<>(pendingApprovals); 
+
+    public List<LeaveRequest> getPendingApprovals() {
+        return new ArrayList<>(pendingApprovals);
     }
-    
-    public int getMaxEmployeesCanManage() { 
-        return maxEmployeesCanManage; 
+
+    public int getMaxEmployeesCanManage() {
+        return maxEmployeesCanManage;
     }
-    
-    public List<String> getRecruitmentPipeline() { 
-        return new ArrayList<>(recruitmentPipeline); 
+
+    public List<String> getRecruitmentPipeline() {
+        return new ArrayList<>(recruitmentPipeline);
     }
-    
-    public List<String> getOpenPositions() { 
-        return new ArrayList<>(openPositions); 
+
+    public List<String> getOpenPositions() {
+        return new ArrayList<>(openPositions);
     }
-    
-    public List<String> getConductedInterviews() { 
-        return new ArrayList<>(conductedInterviews); 
+
+    public List<String> getConductedInterviews() {
+        return new ArrayList<>(conductedInterviews);
     }
-    
-    public int getEmployeesManaged() { 
-        return employeesManaged; 
+
+    public int getEmployeesManaged() {
+        return employeesManaged;
     }
-    
-    public String getHrSpecialization() { 
-        return hrSpecialization; 
+
+    public String getHrSpecialization() {
+        return hrSpecialization;
     }
-    
+
     // ========== SETTERS WITH VALIDATION ==========
-    
-    public void setPendingApprovals(List<LeaveRequest> pendingApprovals) { 
-        this.pendingApprovals = pendingApprovals != null ? 
-            new ArrayList<>(pendingApprovals) : new ArrayList<>();
+
+    public void setPendingApprovals(List<LeaveRequest> pendingApprovals) {
+        this.pendingApprovals = pendingApprovals != null ?
+                new ArrayList<>(pendingApprovals) : new ArrayList<>();
     }
-    
+
     public void setMaxEmployeesCanManage(int maxEmployeesCanManage) {
         if (maxEmployeesCanManage < 1) {
             throw new IllegalArgumentException("Max employees must be at least 1");
@@ -83,22 +83,22 @@ public class HREmployee extends Employee {
         }
         this.maxEmployeesCanManage = maxEmployeesCanManage;
     }
-    
+
     public void setRecruitmentPipeline(List<String> recruitmentPipeline) {
-        this.recruitmentPipeline = recruitmentPipeline != null ? 
-            new ArrayList<>(recruitmentPipeline) : new ArrayList<>();
+        this.recruitmentPipeline = recruitmentPipeline != null ?
+                new ArrayList<>(recruitmentPipeline) : new ArrayList<>();
     }
-    
+
     public void setOpenPositions(List<String> openPositions) {
-        this.openPositions = openPositions != null ? 
-            new ArrayList<>(openPositions) : new ArrayList<>();
+        this.openPositions = openPositions != null ?
+                new ArrayList<>(openPositions) : new ArrayList<>();
     }
-    
+
     public void setConductedInterviews(List<String> conductedInterviews) {
-        this.conductedInterviews = conductedInterviews != null ? 
-            new ArrayList<>(conductedInterviews) : new ArrayList<>();
+        this.conductedInterviews = conductedInterviews != null ?
+                new ArrayList<>(conductedInterviews) : new ArrayList<>();
     }
-    
+
     public void setEmployeesManaged(int employeesManaged) {
         if (employeesManaged < 0) {
             throw new IllegalArgumentException("Employees managed cannot be negative");
@@ -108,7 +108,7 @@ public class HREmployee extends Employee {
         }
         this.employeesManaged = employeesManaged;
     }
-    
+
     public void setHrSpecialization(String hrSpecialization) {
         if (hrSpecialization == null || hrSpecialization.trim().isEmpty()) {
             throw new IllegalArgumentException("HR specialization cannot be empty");
@@ -119,9 +119,9 @@ public class HREmployee extends Employee {
         }
         this.hrSpecialization = spec;
     }
-    
+
     // ========== BUSINESS METHODS ==========
-    
+
     /**
      * Add pending approval request
      */
@@ -133,21 +133,21 @@ public class HREmployee extends Employee {
             pendingApprovals.add(request);
         }
     }
-    
+
     /**
      * Remove pending approval request
      */
     public void removePendingApproval(LeaveRequest request) {
         pendingApprovals.remove(request);
     }
-    
+
     /**
      * Get count of pending approvals
      */
     public int getPendingApprovalsCount() {
         return pendingApprovals.size();
     }
-    
+
     /**
      * Add open position
      */
@@ -159,14 +159,14 @@ public class HREmployee extends Employee {
             openPositions.add(position);
         }
     }
-    
+
     /**
      * Remove open position
      */
     public void removeOpenPosition(String position) {
         openPositions.remove(position);
     }
-    
+
     /**
      * Add candidate to recruitment pipeline
      */
@@ -174,11 +174,11 @@ public class HREmployee extends Employee {
         if (candidateName == null || position == null) {
             throw new IllegalArgumentException("Candidate name and position are required");
         }
-        String entry = String.format("%s - %s - Added on %s", 
-            candidateName, position, java.time.LocalDate.now());
+        String entry = String.format("%s - %s - Added on %s",
+                candidateName, position, java.time.LocalDate.now());
         recruitmentPipeline.add(0, entry); // Add to beginning
     }
-    
+
     /**
      * Conduct interview
      */
@@ -186,18 +186,18 @@ public class HREmployee extends Employee {
         if (candidateName == null || position == null || result == null) {
             throw new IllegalArgumentException("All interview details are required");
         }
-        String interview = String.format("%s for %s - %s - %s", 
-            candidateName, position, result, java.time.LocalDate.now());
+        String interview = String.format("%s for %s - %s - %s",
+                candidateName, position, result, java.time.LocalDate.now());
         conductedInterviews.add(0, interview); // Add to beginning
     }
-    
+
     /**
      * Check if can manage more employees
      */
     public boolean canManageMoreEmployees() {
         return employeesManaged < maxEmployeesCanManage;
     }
-    
+
     /**
      * Increment employees managed count
      */
@@ -207,7 +207,7 @@ public class HREmployee extends Employee {
         }
         employeesManaged++;
     }
-    
+
     /**
      * Decrement employees managed count
      */
@@ -216,7 +216,7 @@ public class HREmployee extends Employee {
             employeesManaged--;
         }
     }
-    
+
     /**
      * Get recruitment statistics
      */
@@ -229,14 +229,17 @@ public class HREmployee extends Employee {
         stats.put("capacityRemaining", maxEmployeesCanManage - employeesManaged);
         return stats;
     }
-    
+
     // ========== OVERRIDDEN ABSTRACT METHODS ==========
-    
+
+    @Override
+    public String getDepartment() { return "HUMAN RESOURCES"; }
+
     @Override
     public String getRoleName() {
         return "HUMAN RESOURCES";
     }
-    
+
     @Override
     public boolean canAccess(String feature) {
         switch (feature) {
@@ -251,17 +254,17 @@ public class HREmployee extends Employee {
                 return false;
         }
     }
-    
+
     @Override
     public DashboardType getDashboardType() {
         return DashboardType.HR;
     }
-    
+
     // ========== OVERRIDDEN OBJECT METHODS ==========
-    
+
     @Override
     public String toString() {
         return String.format("HREmployee[id=%s, name=%s, specialization=%s, pending=%d]",
-            getEmployeeId(), getFullName(), hrSpecialization, pendingApprovals.size());
+                getEmployeeId(), getFullName(), hrSpecialization, pendingApprovals.size());
     }
 }

@@ -5,76 +5,54 @@ import java.math.RoundingMode;
 import java.time.YearMonth;
 import java.util.logging.Logger;
 
-public abstract class DeductionService {
-    
+public abstract class DeductionService implements Deductible {
+
     protected static final Logger LOGGER = Logger.getLogger(DeductionService.class.getName());
-    
+
     // ========== ABSTRACT METHODS ==========
-    
-    /**
-     * Calculate deduction amount
-     * @param grossSalary Gross salary for calculation
-     * @return Calculated deduction amount
-     */
+
+    @Override
     public abstract double calculate(double grossSalary);
-    
-    /**
-     * Get name of deduction
-     */
+
+    @Override
     public abstract String getName();
-    
-    /**
-     * Get description of deduction
-     */
+
+    @Override
     public abstract String getDescription();
-    
+
     // ========== COMMON METHODS ==========
-    
-    /**
-     * Round to 2 decimal places (standard for currency)
-     */
+
     protected double round(double value) {
         BigDecimal bd = BigDecimal.valueOf(value);
         bd = bd.setScale(2, RoundingMode.HALF_UP);
         return bd.doubleValue();
     }
-    
-    /**
-     * Calculate with period-specific rates (for future use)
-     */
+
+    @Override
     public double calculateForPeriod(double grossSalary, YearMonth period) {
-        // Default implementation just uses current rates
         return calculate(grossSalary);
     }
-    
-    /**
-     * Get minimum salary for this deduction
-     */
+
+    @Override
     public double getMinimumSalary() {
         return 0.0;
     }
-    
-    /**
-     * Get maximum deduction amount
-     */
+
+    @Override
     public double getMaximumDeduction() {
         return Double.MAX_VALUE;
     }
-    
-    /**
-     * Validate if deduction is applicable
-     */
+
+    @Override
     public boolean isApplicable(double grossSalary) {
         return grossSalary >= getMinimumSalary();
     }
-    
-    /**
-     * Get formatted deduction amount
-     */
+
+    @Override
     public String getFormatted(double grossSalary) {
         return String.format("₱ %,.2f", calculate(grossSalary));
     }
-    
+
     @Override
     public String toString() {
         return getName() + " - " + getDescription();

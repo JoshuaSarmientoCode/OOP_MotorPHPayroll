@@ -1,9 +1,10 @@
 package model;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-public class Ticket {
+public class Ticket implements Approvable {
     private String ticketId;
     private String employeeId;
     private String employeeName;
@@ -65,6 +66,7 @@ public class Ticket {
     // ========== GETTERS ==========
 
     public String getTicketId() { return ticketId; }
+    @Override
     public String getEmployeeId() { return employeeId; }
     public String getEmployeeName() { return employeeName; }
     public String getSubject() { return subject; }
@@ -158,6 +160,41 @@ public class Ticket {
     public boolean isResolved() {
         return status == TicketStatus.RESOLVED || status == TicketStatus.CLOSED;
     }
+
+    // ========== Approvable IMPLEMENTATION ==========
+
+    @Override
+    public void approve(String approvedBy) {
+        this.assignedTo = approvedBy;
+        setStatus(TicketStatus.RESOLVED);
+    }
+
+    @Override
+    public void reject(String rejectedBy, String reason) {
+        this.resolution = reason;
+        this.assignedTo = rejectedBy;
+        setStatus(TicketStatus.CLOSED);
+    }
+
+    @Override
+    public boolean isPending() { return status == TicketStatus.OPEN || status == TicketStatus.REOPENED; }
+
+    @Override
+    public boolean isApproved() { return status == TicketStatus.RESOLVED; }
+
+    @Override
+    public boolean isRejected() { return status == TicketStatus.CLOSED; }
+
+    @Override
+    public String getRequestId() { return ticketId; }
+
+    @Override
+    public LocalDate getRequestDate() {
+        return createdDate != null ? createdDate.toLocalDate() : null;
+    }
+
+    @Override
+    public String getStatusDisplay() { return getStatusBadge(); }
 
     @Override
     public String toString() {
